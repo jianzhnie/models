@@ -25,10 +25,10 @@
 set -e
 
 # Where the checkpoint and logs will be saved to.
-TRAIN_DIR=/tmp/lenet-model
+TRAIN_DIR=./data/work_dirs/lenet-model
 
 # Where the dataset is saved to.
-DATASET_DIR=/tmp/mnist
+DATASET_DIR=/home/slim/data/mnist
 
 # Download the dataset
 python download_and_convert_data.py \
@@ -43,7 +43,7 @@ python train_image_classifier.py \
   --dataset_dir=${DATASET_DIR} \
   --model_name=lenet \
   --preprocessing_name=lenet \
-  --max_number_of_steps=20000 \
+  --max_number_of_steps=2000 \
   --batch_size=50 \
   --learning_rate=0.01 \
   --save_interval_secs=60 \
