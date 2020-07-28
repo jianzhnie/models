@@ -27,9 +27,13 @@ python model_main_tf2.py -- \
   --pipeline_config_path=$PIPELINE_CONFIG_PATH \
   --alsologtostderr
 """
+import os
 from absl import flags
 import tensorflow.compat.v2 as tf
 from object_detection import model_lib_v2
+
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+
 
 flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
                     'file.')

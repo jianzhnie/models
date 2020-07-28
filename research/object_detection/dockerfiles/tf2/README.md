@@ -6,6 +6,6 @@ These instructions are experimental.
 
 ```bash
 # From the root of the git repository
-docker build -f research/object_detection/dockerfiles/tf2/Dockerfile -t od .
-docker run -it od
+docker build -f research/object_detection/dockerfiles/tf2/Dockerfile -t tensorflow .
+docker run -it tensorflow
 ```
