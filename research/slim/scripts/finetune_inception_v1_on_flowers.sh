@@ -25,10 +25,10 @@
 set -e
 
 # Where the pre-trained InceptionV1 checkpoint is saved to.
-PRETRAINED_CHECKPOINT_DIR=./work_dirs/checkpoints
+PRETRAINED_CHECKPOINT_DIR=data/work_dirs/checkpoints
 
 # Where the training (fine-tuned) checkpoint and logs will be saved to.
-TRAIN_DIR=./work_dirs/flowers-models/inception_v1
+TRAIN_DIR=data/work_dirs/flowers-models/inception_v1
 
 # Where the dataset is saved to.
 DATASET_DIR=data/flowers

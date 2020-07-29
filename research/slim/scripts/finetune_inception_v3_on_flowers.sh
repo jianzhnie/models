@@ -24,14 +24,14 @@
 # ./slim/scripts/finetune_inception_v3_on_flowers.sh
 set -e
 
-# Where the pre-trained InceptionV3 checkpoint is saved to.
-PRETRAINED_CHECKPOINT_DIR=/tmp/checkpoints
+# Where the pre-trained InceptionV1 checkpoint is saved to.
+PRETRAINED_CHECKPOINT_DIR=data/work_dirs/checkpoints
 
 # Where the training (fine-tuned) checkpoint and logs will be saved to.
-TRAIN_DIR=/tmp/flowers-models/inception_v3
+TRAIN_DIR=data/work_dirs/flowers-models/inception_v3
 
 # Where the dataset is saved to.
-DATASET_DIR=/tmp/flowers
+DATASET_DIR=data/flowers
 
 # Download the pre-trained checkpoint.
 if [ ! -d "$PRETRAINED_CHECKPOINT_DIR" ]; then
