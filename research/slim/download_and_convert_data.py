@@ -45,6 +45,8 @@ from datasets import download_and_convert_cifar10
 from datasets import download_and_convert_flowers
 from datasets import download_and_convert_mnist
 from datasets import download_and_convert_visualwakewords
+from datasets import convert_cls_images_tfrecord
+
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -60,15 +62,30 @@ tf.app.flags.DEFINE_string(
     'The directory where the output TFRecords and temporary files are saved.')
 
 tf.flags.DEFINE_float(
+    'random_seed', 0,
+    None,
+    'random_seed to generate random data')
+
+tf.flags.DEFINE_float(
+    'val_split', 0.3,
+    None,
+    'ratio to split the data into train_data and val_data')
+
+tf.flags.DEFINE_float(
+    'num_shards', 5,
+    None,
+    'ratio to split the data into train_data and val_data')
+
+tf.flags.DEFINE_float(
     'small_object_area_threshold', 0.005,
     'For --dataset_name=visualwakewords only. Threshold of fraction of image '
     'area below which small objects are filtered')
+
 
 tf.flags.DEFINE_string(
     'foreground_class_of_interest', 'person',
     'For --dataset_name=visualwakewords only. Build a binary classifier based '
     'on the presence or absence of this object in the image.')
-
 
 def main(_):
   if not FLAGS.dataset_name:
@@ -87,8 +104,9 @@ def main(_):
         FLAGS.dataset_dir, FLAGS.small_object_area_threshold,
         FLAGS.foreground_class_of_interest)
   else:
-    raise ValueError(
-        'dataset_name [%s] was not recognized.' % FLAGS.dataset_name)
+    convert_cls_images_tfrecord.run(
+        FLAGS.dataset_dir, FLAGS.dataset_name, FLAGS.num_shards,
+        FLAGS.random_seed, FLAGS.val_split)
 
 if __name__ == '__main__':
   tf.app.run()

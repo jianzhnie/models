@@ -88,13 +88,13 @@ def _get_filenames_and_classes(dataset_root, dataset_name):
 	return photo_filenames, sorted(class_names)
 
 
-def _get_dataset_filename(dataset_root, dataset_name, split_name, _NUM_SHARDS, shard_id):
+def _get_dataset_filename(dataset_root, dataset_name, split_name, num_shards, shard_id):
 	output_filename = 'dataset_name_%s_%05d-of-%05d.tfrecord' % (
-		split_name, shard_id, _NUM_SHARDS)
+		split_name, shard_id, num_shards)
 	return os.path.join(dataset_root, output_filename)
 
 
-def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_names_to_ids, _NUM_SHARDS):
+def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_names_to_ids, num_shards):
 	"""Converts the given filenames to a TFRecord dataset.
 
 	Args:
@@ -106,16 +106,16 @@ def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_na
 	"""
 	assert split_name in ['train', 'validation']
 
-	num_per_shard = int(math.ceil(len(filenames) / float(_NUM_SHARDS)))
+	num_per_shard = int(math.ceil(len(filenames) / float(num_shards)))
 
 	with tf.Graph().as_default():
 		image_reader = ImageReader()
 
 		with tf.Session('') as sess:
 
-			for shard_id in range(_NUM_SHARDS):
+			for shard_id in range(num_shards):
 				output_filename = _get_dataset_filename(
-					dataset_root, dataset_name, split_name, _NUM_SHARDS, shard_id)
+					dataset_root, dataset_name, split_name, num_shards, shard_id)
 
 				with tf.python_io.TFRecordWriter(output_filename) as tfrecord_writer:
 					start_ndx = shard_id * num_per_shard
@@ -140,17 +140,17 @@ def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_na
 	sys.stdout.flush()
 
 
-def _dataset_exists(dataset_root, dataset_name, _NUM_SHARDS):
+def _dataset_exists(dataset_root, dataset_name, num_shards):
 	for split_name in ['train', 'validation']:
-		for shard_id in range(_NUM_SHARDS):
+		for shard_id in range(num_shards):
 			output_filename = _get_dataset_filename(
-			dataset_root, dataset_name, split_name, _NUM_SHARDS, shard_id)
+			dataset_root, dataset_name, split_name, num_shards, shard_id)
 			if not tf.gfile.Exists(output_filename):
 				return False
 	return True
 
 
-def run(dataset_root, dataset_name,  _NUM_SHARDS, random_seed,val_split=0.2):
+def run(dataset_root, dataset_name, num_shards, random_seed=0, val_split=0.2):
 	"""Runs the download and conversion operation.
 
 	Args:
@@ -159,7 +159,7 @@ def run(dataset_root, dataset_name,  _NUM_SHARDS, random_seed,val_split=0.2):
 	if not tf.gfile.Exists(dataset_root):
 		tf.gfile.MakeDirs(dataset_root)
 
-	if _dataset_exists(dataset_root, dataset_name, _NUM_SHARDS):
+	if _dataset_exists(dataset_root, dataset_name, num_shards):
 		print('Dataset files already exist. Exiting without re-creating them.')
 		return
 
@@ -177,9 +177,9 @@ def run(dataset_root, dataset_name,  _NUM_SHARDS, random_seed,val_split=0.2):
 
 	# First, convert the training and validation sets.
 	_convert_dataset(dataset_root, dataset_name,'train', training_filenames, class_names_to_ids,
-					_NUM_SHARDS)
+					num_shards)
 	_convert_dataset(dataset_root, dataset_name, 'validation', validation_filenames, class_names_to_ids,
-					_NUM_SHARDS)
+					num_shards)
 
 	# Finally, write the labels file:
 	labels_to_class_names = dict(
