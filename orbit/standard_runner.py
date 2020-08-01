@@ -1,4 +1,3 @@
-# Lint as: python3
 # Copyright 2020 The Orbit Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -144,7 +143,8 @@ class StandardTrainer(runner.AbstractTrainer, metaclass=abc.ABCMeta):
 
     Returns:
       The function may return a dictionary of `Tensors`, which will be
-      written to logs and as TensorBoard summaries.
+      written to logs and as TensorBoard summaries. It can also be a
+      nested dictionary, yielding a hierarchy of summary directories.
     """
     pass
 
@@ -261,7 +261,8 @@ class StandardEvaluator(runner.AbstractEvaluator, metaclass=abc.ABCMeta):
 
     Returns:
       The function may return a dictionary of `Tensors`, which will be
-      written to logs and as TensorBoard summaries.
+      written to logs and as TensorBoard summaries. It can also be a
+      nested dictionary, yielding a hierarchy of summary directories.
     """
     pass
 

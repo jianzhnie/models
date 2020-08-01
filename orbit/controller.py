@@ -1,4 +1,3 @@
-# Lint as: python3
 # Copyright 2020 The Orbit Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -207,7 +206,7 @@ class Controller:
     else:
       logging.info("Evaluating at train step: %s", current_step)
 
-    with self.eval_summary_manager.summary_writer.as_default():
+    with self.eval_summary_manager.summary_writer().as_default():
       eval_outputs = self.evaluator.evaluate(steps)
 
     if eval_outputs:
@@ -339,7 +338,7 @@ class Controller:
     current_step += num_steps
     num_steps = tf.convert_to_tensor(num_steps, dtype=tf.int32)
 
-    with self.summary_manager.summary_writer.as_default():
+    with self.summary_manager.summary_writer().as_default():
       # Create a lambda that returns true when summaries should be written.
       should_record = False  # Allows static optimization in no-summary cases.
       if self.summary_interval:
