@@ -198,7 +198,10 @@ tf.app.flags.DEFINE_string(
     'dataset_split_name', 'train', 'The name of the train/test split.')
 
 tf.app.flags.DEFINE_string(
-    'dataset_dir', None, 'The directory where the dataset files are stored.')
+    'dataset_dir', None, 'The directory where the tfrecord dataset files are stored.')
+
+tf.app.flags.DEFINE_string(
+    'data_path', None, 'The directory where the original image dataset files are stored.')
 
 tf.app.flags.DEFINE_float(
     'val_split', 0.3, 'ratio to split the data into train_data and val_data')
@@ -642,5 +645,6 @@ def main(_):
 
 
 if __name__ == '__main__':
+  FLAGS.train_dir = FLAGS.data_path
   download_and_convert_data()
   tf.app.run()
