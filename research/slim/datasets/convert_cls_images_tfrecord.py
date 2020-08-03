@@ -37,7 +37,8 @@ import tensorflow.compat.v1 as tf
 from datasets import dataset_utils
 
 
-
+# Seed for repeatability.
+_RANDOM_SEED = 0
 
 class ImageReader(object):
 	"""Helper class that provides TensorFlow image coding utilities."""
@@ -59,42 +60,42 @@ class ImageReader(object):
 		return image
 
 
-def _get_filenames_and_classes(dataset_root, dataset_name):
+def _get_filenames_and_classes(dataset_dir, dataset_name):
 	"""Returns a list of filenames and inferred class names.
 
 	Args:
-		dataset_root: A directory containing a set of subdirectories representing
+		dataset_dir: A directory containing a set of subdirectories representing
 		class names. Each subdirectory should contain PNG or JPG encoded images.
 
 	Returns:
-		A list of image file paths, relative to `dataset_root` and the list of
+		A list of image file paths, relative to `dataset_dir` and the list of
 		subdirectories, representing class names.
 	"""
-	dataset_root = os.path.join(dataset_root, dataset_name)
+	dataset_path = os.path.join(dataset_dir, dataset_name)
 	directories = []
 	class_names = []
-	for filename in os.listdir(dataset_root):
-		path = os.path.join(dataset_name, filename)
+	for category in os.listdir(dataset_path):
+		path = os.path.join(dataset_path, category)
 		if os.path.isdir(path):
 			directories.append(path)
-		class_names.append(filename)
+			class_names.append(category)
 
 	photo_filenames = []
 	for directory in directories:
 		for filename in os.listdir(directory):
 			path = os.path.join(directory, filename)
 			photo_filenames.append(path)
-
+	
 	return photo_filenames, sorted(class_names)
 
 
-def _get_dataset_filename(dataset_root, dataset_name, split_name, num_shards, shard_id):
-	output_filename = 'dataset_name_%s_%05d-of-%05d.tfrecord' % (
+def _get_dataset_filename(dataset_dir, dataset_name, split_name, num_shards, shard_id):
+	output_filename = '%s_%s_%05d-of-%05d.tfrecord' % (dataset_name,
 		split_name, shard_id, num_shards)
-	return os.path.join(dataset_root, output_filename)
+	return os.path.join(dataset_dir, output_filename)
 
 
-def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_names_to_ids, num_shards):
+def _convert_dataset(dataset_dir, dataset_name, split_name, filenames, class_names_to_ids, num_shards):
 	"""Converts the given filenames to a TFRecord dataset.
 
 	Args:
@@ -102,7 +103,7 @@ def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_na
 		filenames: A list of absolute paths to png or jpg images.
 		class_names_to_ids: A dictionary from class names (strings) to ids
 		(integers).
-		dataset_root: The directory where the converted datasets are stored.
+		dataset_dir: The directory where the converted datasets are stored.
 	"""
 	assert split_name in ['train', 'validation']
 
@@ -115,7 +116,7 @@ def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_na
 
 			for shard_id in range(num_shards):
 				output_filename = _get_dataset_filename(
-					dataset_root, dataset_name, split_name, num_shards, shard_id)
+					dataset_dir, dataset_name, split_name, num_shards, shard_id)
 
 				with tf.python_io.TFRecordWriter(output_filename) as tfrecord_writer:
 					start_ndx = shard_id * num_per_shard
@@ -140,51 +141,57 @@ def _convert_dataset(dataset_root, dataset_name, split_name, filenames, class_na
 	sys.stdout.flush()
 
 
-def _dataset_exists(dataset_root, dataset_name, num_shards):
+def _dataset_exists(dataset_dir, dataset_name, num_shards):
 	for split_name in ['train', 'validation']:
 		for shard_id in range(num_shards):
 			output_filename = _get_dataset_filename(
-			dataset_root, dataset_name, split_name, num_shards, shard_id)
+			dataset_dir, dataset_name, split_name, num_shards, shard_id)
 			if not tf.gfile.Exists(output_filename):
 				return False
 	return True
 
 
-def run(dataset_root, dataset_name, num_shards, random_seed=0, val_split=0.2):
+def run(dataset_dir, dataset_name, num_shards, val_split=0.2):
 	"""Runs the download and conversion operation.
 
 	Args:
-		dataset_root: The dataset directory where the dataset is stored.
+		dataset_dir: The dataset directory where the dataset is stored.
 	"""
-	if not tf.gfile.Exists(dataset_root):
-		tf.gfile.MakeDirs(dataset_root)
+	if not tf.gfile.Exists(dataset_dir):
+		tf.gfile.MakeDirs(dataset_dir)
 
-	if _dataset_exists(dataset_root, dataset_name, num_shards):
+	if _dataset_exists(dataset_dir, dataset_name, num_shards):
 		print('Dataset files already exist. Exiting without re-creating them.')
 		return
 
-	photo_filenames, class_names = _get_filenames_and_classes(dataset_root, dataset_name)
+	photo_filenames, class_names = _get_filenames_and_classes(dataset_dir, dataset_name)
+
 	class_names_to_ids = dict(
 		list(zip(class_names, list(range(len(class_names))))))
 
 	# Divide into train and test:
-	random.seed(random_seed)
+	random.seed(_RANDOM_SEED)
 	random.shuffle(photo_filenames)
 
 	num_validation = int(len(photo_filenames) * val_split)
+	num_train = len(photo_filenames) -  num_validation
+
 	training_filenames = photo_filenames[num_validation:]
 	validation_filenames = photo_filenames[:num_validation]
 
 	# First, convert the training and validation sets.
-	_convert_dataset(dataset_root, dataset_name,'train', training_filenames, class_names_to_ids,
+	_convert_dataset(dataset_dir, dataset_name,'train', training_filenames, class_names_to_ids,
 					num_shards)
-	_convert_dataset(dataset_root, dataset_name, 'validation', validation_filenames, class_names_to_ids,
+	_convert_dataset(dataset_dir, dataset_name, 'validation', validation_filenames, class_names_to_ids,
 					num_shards)
 
 	# Finally, write the labels file:
 	labels_to_class_names = dict(
 		list(zip(list(range(len(class_names))), class_names)))
-	dataset_utils.write_label_file(labels_to_class_names, dataset_root)
+	dataset_utils.write_label_file(labels_to_class_names, dataset_dir)
 
-	#_clean_up_temporary_files(dataset_root)
-	print('\nFinished converting the Flowers dataset!')
+	# Finally, write the datasets splits file
+	dataset_split_dict = dict(train=num_train, validation=num_validation)
+	dataset_utils.write_dataset_split_file(dataset_split_dict, dataset_dir)
+	#_clean_up_temporary_files(dataset_dir)
+	print('\nFinished converting the %s dataset!' %dataset_name)

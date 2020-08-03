@@ -156,7 +156,7 @@ def _clean_up_temporary_files(dataset_dir):
   tf.gfile.DeleteRecursively(tmp_dir)
 
 
-def run(dataset_dir):
+def run(dataset_dir, dataset_name):
   """Runs the download and conversion operation.
 
   Args:
@@ -192,7 +192,7 @@ def run(dataset_dir):
 
   # Finally, write the labels file:
   labels_to_class_names = dict(zip(range(len(_CLASS_NAMES)), _CLASS_NAMES))
-  dataset_utils.write_label_file(labels_to_class_names, dataset_dir)
+  dataset_utils.write_label_file(labels_to_class_names, dataset_dir, dataset_name)
 
   #_clean_up_temporary_files(dataset_dir)
   print('\nFinished converting the Cifar10 dataset!')

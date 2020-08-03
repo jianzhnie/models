@@ -40,7 +40,7 @@ _ITEMS_TO_DESCRIPTIONS = {
 }
 
 
-def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
+def get_split(split_name, dataset_dir, dataset_name, file_pattern=None, reader=None):
   """Gets a dataset tuple with instructions for reading flowers.
 
   Args:
@@ -84,8 +84,8 @@ def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
       keys_to_features, items_to_handlers)
 
   labels_to_names = None
-  if dataset_utils.has_labels(dataset_dir):
-    labels_to_names = dataset_utils.read_label_file(dataset_dir)
+  if dataset_utils.has_labels(dataset_dir, dataset_name):
+    labels_to_names = dataset_utils.read_label_file(dataset_dir, dataset_name)
 
   return slim.dataset.Dataset(
       data_sources=file_pattern,

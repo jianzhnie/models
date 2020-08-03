@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATA_DIR=/home/robin/datasets/flowers
+DATA_DIR=/data/flowers
 python download_and_convert_data.py \
     --dataset_name=flowers \
     --dataset_dir="${DATA_DIR}"
@@ -11,4 +11,4 @@ python download_and_convert_data.py \
 
 python download_and_convert_data.py \
     --dataset_name=hymenoptera \
-    --dataset_dir=/data/hymenoptera_data
+    --dataset_dir=/home/robin/datasets/hymenoptera_data

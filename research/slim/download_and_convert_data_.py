@@ -45,8 +45,6 @@ from datasets import download_and_convert_cifar10
 from datasets import download_and_convert_flowers
 from datasets import download_and_convert_mnist
 from datasets import download_and_convert_visualwakewords
-from datasets import convert_cls_images_tfrecord
-
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -61,45 +59,36 @@ tf.app.flags.DEFINE_string(
     None,
     'The directory where the output TFRecords and temporary files are saved.')
 
-tf.app.flags.DEFINE_float(
-    'val_split', 0.3,
-    'ratio to split the data into train_data and val_data')
-
-tf.app.flags.DEFINE_integer(
-    'num_shards', 1,
-    'Num of breaks to split the data into train_data and val_data')
-
-tf.app.flags.DEFINE_float(
+tf.flags.DEFINE_float(
     'small_object_area_threshold', 0.005,
     'For --dataset_name=visualwakewords only. Threshold of fraction of image '
     'area below which small objects are filtered')
 
-tf.app.flags.DEFINE_string(
+tf.flags.DEFINE_string(
     'foreground_class_of_interest', 'person',
     'For --dataset_name=visualwakewords only. Build a binary classifier based '
     'on the presence or absence of this object in the image.')
 
+
 def main(_):
-	if not FLAGS.dataset_name:
-		raise ValueError('You must supply the dataset name with --dataset_name')
-	if not FLAGS.dataset_dir:
-		raise ValueError('You must supply the dataset directory with --dataset_dir')
+  if not FLAGS.dataset_name:
+    raise ValueError('You must supply the dataset name with --dataset_name')
+  if not FLAGS.dataset_dir:
+    raise ValueError('You must supply the dataset directory with --dataset_dir')
 
-	if FLAGS.dataset_name == 'flowers':
-		download_and_convert_flowers.run(FLAGS.dataset_dir, FLAGS.dataset_name)
-	elif FLAGS.dataset_name == 'cifar10':
-		download_and_convert_cifar10.run(FLAGS.dataset_dir, FLAGS.dataset_name)
-	elif FLAGS.dataset_name == 'mnist':
-		download_and_convert_mnist.run(FLAGS.dataset_dir, FLAGS.dataset_name)
-	elif FLAGS.dataset_name == 'visualwakewords':
-		download_and_convert_visualwakewords.run(
-			FLAGS.dataset_dir, FLAGS.dataset_name, FLAGS.small_object_area_threshold,
-			FLAGS.foreground_class_of_interest)
-	else:
-		convert_cls_images_tfrecord.run(
-			FLAGS.dataset_dir, FLAGS.dataset_name, FLAGS.num_shards,
-			FLAGS.val_split)
-
+  if FLAGS.dataset_name == 'flowers':
+    download_and_convert_flowers.run(FLAGS.dataset_dir)
+  elif FLAGS.dataset_name == 'cifar10':
+    download_and_convert_cifar10.run(FLAGS.dataset_dir)
+  elif FLAGS.dataset_name == 'mnist':
+    download_and_convert_mnist.run(FLAGS.dataset_dir)
+  elif FLAGS.dataset_name == 'visualwakewords':
+    download_and_convert_visualwakewords.run(
+        FLAGS.dataset_dir, FLAGS.small_object_area_threshold,
+        FLAGS.foreground_class_of_interest)
+  else:
+    raise ValueError(
+        'dataset_name [%s] was not recognized.' % FLAGS.dataset_name)
 
 if __name__ == '__main__':
-   tf.app.run()
+  tf.app.run()

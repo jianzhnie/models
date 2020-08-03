@@ -59,7 +59,7 @@ python train_image_classifier.py \
   --checkpoint_path=${PRETRAINED_CHECKPOINT_DIR}/resnet_v1_50.ckpt \
   --checkpoint_exclude_scopes=resnet_v1_50/logits \
   --trainable_scopes=resnet_v1_50/logits \
-  --max_number_of_steps=3000 \
+  --max_number_of_steps=30000 \
   --batch_size=32 \
   --learning_rate=0.01 \
   --save_interval_secs=60 \
