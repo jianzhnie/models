@@ -188,10 +188,10 @@ def run(dataset_dir, dataset_name, num_shards, val_split=0.2):
 	# Finally, write the labels file:
 	labels_to_class_names = dict(
 		list(zip(list(range(len(class_names))), class_names)))
-	dataset_utils.write_label_file(labels_to_class_names, dataset_dir)
+	dataset_utils.write_label_file(labels_to_class_names, dataset_dir, dataset_name)
 
 	# Finally, write the datasets splits file
 	dataset_split_dict = dict(train=num_train, validation=num_validation)
-	dataset_utils.write_dataset_split_file(dataset_split_dict, dataset_dir)
+	dataset_utils.write_dataset_split_file(dataset_split_dict, dataset_dir, dataset_name)
 	#_clean_up_temporary_files(dataset_dir)
 	print('\nFinished converting the %s dataset!' %dataset_name)

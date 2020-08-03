@@ -33,12 +33,14 @@ DATASET_DIR=/home/slim/data/mnist
 # Download the dataset
 python download_and_convert_data.py \
   --dataset_name=mnist \
+  --val_split=0.2 \
   --dataset_dir=${DATASET_DIR}
 
 # Run training.
 python train_image_classifier.py \
   --train_dir=${TRAIN_DIR} \
   --dataset_name=mnist \
+  --val_split=0.2 \
   --dataset_split_name=train \
   --dataset_dir=${DATASET_DIR} \
   --model_name=lenet \

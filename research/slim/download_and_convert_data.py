@@ -79,7 +79,7 @@ tf.app.flags.DEFINE_string(
     'For --dataset_name=visualwakewords only. Build a binary classifier based '
     'on the presence or absence of this object in the image.')
 
-def main(_):
+def download_and_convert_data(_):
 	if not FLAGS.dataset_name:
 		raise ValueError('You must supply the dataset name with --dataset_name')
 	if not FLAGS.dataset_dir:
@@ -102,4 +102,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-   tf.app.run()
+   tf.app.run(download_and_convert_data)

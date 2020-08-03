@@ -30,24 +30,25 @@ TRAIN_DIR=data/work_dirs/dog-vs-cat-models/resnet_v1_50_from_scrach
 # Where the dataset is saved to.
 DATASET_DIR=data/dog-vs-cat/
 
-# Download the dataset
-python download_and_convert_data.py \
-  --dataset_name=dog-vs-cat \
-  --dataset_dir=${DATASET_DIR} \
-  --num_shards=5
+# # Download the dataset
+# python download_and_convert_data.py \
+#   --dataset_name=dog-vs-cat \
+#   --dataset_dir=${DATASET_DIR} \
+#   --num_shards=5
 
 # Fine-tune only the new layers for 3000 steps.
 python train_image_classifier.py \
   --train_dir=${TRAIN_DIR} \
   --dataset_name=dog-vs-cat \
   --dataset_split_name=train \
+  --val_split=0.2 \
   --dataset_dir=${DATASET_DIR} \
   --model_name=resnet_v1_50 \
-  --max_number_of_steps=100000 \
-  --batch_size=32 \
+  --max_number_of_steps=6000 \
+  --batch_size=16 \
   --learning_rate=0.01 \
   --save_interval_secs=120 \
-  --save_summaries_secs=60 \
+  --save_summaries_secs=120 \
   --log_every_n_steps=100 \
   --optimizer=rmsprop \
   --learning_rate_decay_factor=0.1 \
@@ -69,14 +70,15 @@ python train_image_classifier.py \
   --train_dir=${TRAIN_DIR}/all \
   --dataset_name=dog-vs-cat \
   --dataset_split_name=train \
+  --val_split=0.2 \
   --dataset_dir=${DATASET_DIR} \
   --checkpoint_path=${TRAIN_DIR} \
   --model_name=resnet_v1_50 \
   --max_number_of_steps=1000 \
   --batch_size=32 \
   --learning_rate=0.001 \
-  --save_interval_secs=60 \
-  --save_summaries_secs=60 \
+  --save_interval_secs=120 \
+  --save_summaries_secs=120 \
   --log_every_n_steps=100 \
   --optimizer=rmsprop \
   --weight_decay=0.00004

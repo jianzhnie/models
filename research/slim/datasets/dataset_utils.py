@@ -206,7 +206,7 @@ def has_labels(dataset_dir, dataset_name,filename=LABELS_FILENAME):
   Returns:
     `True` if the labels file exists and `False` otherwise.
   """
-  return tf.gfile.Exists(os.path.join(dataset_dir, filename))
+  return tf.gfile.Exists(os.path.join(dataset_dir, filename %(dataset_name)))
 
 
 def has_dataset_split_file(dataset_dir, dataset_name, filename=DATASET_SPLIT_FILENAME):
@@ -219,7 +219,7 @@ def has_dataset_split_file(dataset_dir, dataset_name, filename=DATASET_SPLIT_FIL
   Returns:
     `True` if the labels file exists and `False` otherwise.
   """
-  return tf.gfile.Exists(os.path.join(dataset_dir, filename))
+  return tf.gfile.Exists(os.path.join(dataset_dir, filename %(dataset_name)))
 
 
 def read_label_file(dataset_dir, dataset_name, filename=LABELS_FILENAME):
@@ -232,7 +232,7 @@ def read_label_file(dataset_dir, dataset_name, filename=LABELS_FILENAME):
   Returns:
     A map from a label (integer) to class name.
   """
-  labels_filename = os.path.join(dataset_dir, filename)
+  labels_filename = os.path.join(dataset_dir, filename%(dataset_name))
   with tf.gfile.Open(labels_filename, 'rb') as f:
     lines = f.read().decode()
   lines = lines.split('\n')

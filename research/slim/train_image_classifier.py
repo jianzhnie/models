@@ -28,6 +28,12 @@ import tf_slim as slim
 
 from tensorflow.contrib import quantize as contrib_quantize
 
+from datasets import download_and_convert_cifar10
+from datasets import download_and_convert_flowers
+from datasets import download_and_convert_mnist
+from datasets import download_and_convert_visualwakewords
+from datasets import convert_cls_images_tfrecord
+
 from datasets import dataset_factory
 from deployment import model_deploy
 from nets import nets_factory
@@ -193,6 +199,12 @@ tf.app.flags.DEFINE_string(
 
 tf.app.flags.DEFINE_string(
     'dataset_dir', None, 'The directory where the dataset files are stored.')
+
+tf.app.flags.DEFINE_float(
+    'val_split', 0.3, 'ratio to split the data into train_data and val_data')
+
+tf.app.flags.DEFINE_integer(
+    'num_shards', 1, 'Num of breaks to split the data into train_data and val_data')
 
 tf.app.flags.DEFINE_integer(
     'labels_offset', 0,
@@ -414,6 +426,27 @@ def _get_variables_to_train():
   return variables_to_train
 
 
+def download_and_convert_data():
+	if not FLAGS.dataset_name:
+		raise ValueError('You must supply the dataset name with --dataset_name')
+	if not FLAGS.dataset_dir:
+		raise ValueError('You must supply the dataset directory with --dataset_dir')
+
+	if FLAGS.dataset_name == 'flowers':
+		download_and_convert_flowers.run(FLAGS.dataset_dir, FLAGS.dataset_name)
+	elif FLAGS.dataset_name == 'cifar10':
+		download_and_convert_cifar10.run(FLAGS.dataset_dir, FLAGS.dataset_name)
+	elif FLAGS.dataset_name == 'mnist':
+		download_and_convert_mnist.run(FLAGS.dataset_dir, FLAGS.dataset_name)
+	elif FLAGS.dataset_name == 'visualwakewords':
+		download_and_convert_visualwakewords.run(
+			FLAGS.dataset_dir, FLAGS.dataset_name, FLAGS.small_object_area_threshold,
+			FLAGS.foreground_class_of_interest)
+	else:
+		convert_cls_images_tfrecord.run(
+			FLAGS.dataset_dir, FLAGS.dataset_name, FLAGS.num_shards,
+			FLAGS.val_split)
+
 def main(_):
   if not FLAGS.dataset_dir:
     raise ValueError('You must supply the dataset directory with --dataset_dir')
@@ -609,4 +642,5 @@ def main(_):
 
 
 if __name__ == '__main__':
+  download_and_convert_data()
   tf.app.run()
