@@ -64,7 +64,7 @@ python train_image_classifier.py \
   --learning_rate=0.01 \
   --save_interval_secs=60 \
   --save_summaries_secs=60 \
-  --log_every_n_steps=100 \
+  --log_every_n_steps=10 \
   --optimizer=rmsprop \
   --weight_decay=0.00004
 

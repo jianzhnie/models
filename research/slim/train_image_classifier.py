@@ -43,8 +43,12 @@ tf.app.flags.DEFINE_string(
     'master', '', 'The address of the TensorFlow master to use.')
 
 tf.app.flags.DEFINE_string(
-    'train_dir', '/tmp/tfmodel/',
+    'train_dir', None,
     'Directory where checkpoints and event logs are written to.')
+
+tf.app.flags.DEFINE_string(
+    'output_path', None, 'Directory where checkpoints and event logs are written to.')
+
 tf.app.flags.DEFINE_float(
     'warmup_epochs', 0,
     'Linearly warmup learning rate from 0 to learning_rate over this '
@@ -257,7 +261,6 @@ tf.app.flags.DEFINE_boolean(
     'When restoring a checkpoint would ignore missing variables.')
 
 FLAGS = tf.app.flags.FLAGS
-
 
 def _configure_learning_rate(num_samples_per_epoch, global_step):
   """Configures the learning rate.
@@ -645,6 +648,9 @@ def main(_):
 
 
 if __name__ == '__main__':
-  FLAGS.train_dir = FLAGS.data_path
+  if FLAGS.data_path is not None:
+    FLAGS.dataset_dir = FLAGS.data_path
+  if FLAGS.output_path is not None:
+    FLAGS.train_dir = FLAGS.output_path
   download_and_convert_data()
   tf.app.run()
