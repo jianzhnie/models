@@ -43,12 +43,15 @@ tf.app.flags.DEFINE_string(
     'master', '', 'The address of the TensorFlow master to use.')
 
 tf.app.flags.DEFINE_string(
-    'checkpoint_path', '/tmp/tfmodel/',
+    'checkpoint_path', None,
     'The directory where the model was written to or an absolute path to a '
     'checkpoint file.')
 
 tf.app.flags.DEFINE_string(
-    'eval_dir', '/tmp/tfmodel/', 'Directory where the results are saved to.')
+    'eval_dir', None, 'Directory where the results are saved to.')
+
+tf.app.flags.DEFINE_string(
+    'output_path', None, 'Directory where checkpoints and event logs are written to.')
 
 tf.app.flags.DEFINE_integer(
     'num_preprocessing_threads', 4,
@@ -62,6 +65,9 @@ tf.app.flags.DEFINE_string(
 
 tf.app.flags.DEFINE_string(
     'dataset_dir', None, 'The directory where the dataset files are stored.')
+
+tf.app.flags.DEFINE_string(
+    'data_path', None, 'The directory where the original image dataset files are stored.')
 
 tf.app.flags.DEFINE_integer(
     'labels_offset', 0,
@@ -205,4 +211,8 @@ def main(_):
 
 
 if __name__ == '__main__':
+  if FLAGS.data_path is not None:
+    FLAGS.dataset_dir = FLAGS.data_path
+  if FLAGS.output_path is not None:
+    FLAGS.eval_dir = FLAGS.output_path
   tf.app.run()
