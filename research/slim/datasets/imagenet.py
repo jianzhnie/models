@@ -118,7 +118,7 @@ def create_readable_names_for_imagenet_labels():
   return labels_to_names
 
 
-def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
+def get_split(split_name, dataset_dir, dataset_name, file_pattern=None, reader=None):
   """Gets a dataset tuple with instructions for reading ImageNet.
 
   Args:
@@ -181,11 +181,11 @@ def get_split(split_name, dataset_dir, file_pattern=None, reader=None):
 
   labels_to_names = None
   if LOAD_READABLE_NAMES:
-    if dataset_utils.has_labels(dataset_dir):
-      labels_to_names = dataset_utils.read_label_file(dataset_dir)
+    if dataset_utils.has_labels(dataset_dir, dataset_name):
+      labels_to_names = dataset_utils.read_label_file(dataset_dir, dataset_name)
     else:
       labels_to_names = create_readable_names_for_imagenet_labels()
-      dataset_utils.write_label_file(labels_to_names, dataset_dir)
+      dataset_utils.write_label_file(labels_to_names, dataset_dir, dataset_name)
 
   return slim.dataset.Dataset(
       data_sources=file_pattern,
