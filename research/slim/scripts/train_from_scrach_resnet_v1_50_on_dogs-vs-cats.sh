@@ -44,7 +44,7 @@ python train_image_classifier.py \
   --val_split=0.2 \
   --dataset_dir=${DATASET_DIR} \
   --model_name=resnet_v1_50 \
-  --max_number_of_steps=6000 \
+  --max_number_of_steps=60000 \
   --batch_size=16 \
   --learning_rate=0.01 \
   --save_interval_secs=120 \
