@@ -44,51 +44,51 @@ python train_image_classifier.py \
   --val_split=0.2 \
   --dataset_dir=${DATASET_DIR} \
   --model_name=resnet_v1_50 \
-  --max_number_of_steps=60000 \
+  --max_number_of_steps=1000 \
   --batch_size=16 \
   --learning_rate=0.01 \
-  --save_interval_secs=120 \
-  --save_summaries_secs=120 \
+  --save_interval_secs=10 \
+  --save_summaries_secs=10 \
   --log_every_n_steps=100 \
   --optimizer=rmsprop \
   --learning_rate_decay_factor=0.1 \
   --num_epochs_per_decay=200 \
   --weight_decay=0.0001
 
-# Run evaluation.
-python eval_image_classifier.py \
-  --checkpoint_path=${TRAIN_DIR} \
-  --eval_dir=${TRAIN_DIR} \
-  --dataset_name=dog-vs-cat \
-  --dataset_split_name=validation \
-  --dataset_dir=${DATASET_DIR} \
-  --model_name=resnet_v1_50
+# # Run evaluation.
+# python eval_image_classifier.py \
+#   --checkpoint_path=${TRAIN_DIR} \
+#   --eval_dir=${TRAIN_DIR} \
+#   --dataset_name=dog-vs-cat \
+#   --dataset_split_name=validation \
+#   --dataset_dir=${DATASET_DIR} \
+#   --model_name=resnet_v1_50
 
 
-# Fine-tune all the new layers for 1000 steps.
-python train_image_classifier.py \
-  --train_dir=${TRAIN_DIR}/all \
-  --dataset_name=dog-vs-cat \
-  --dataset_split_name=train \
-  --val_split=0.2 \
-  --dataset_dir=${DATASET_DIR} \
-  --checkpoint_path=${TRAIN_DIR} \
-  --model_name=resnet_v1_50 \
-  --max_number_of_steps=1000 \
-  --batch_size=32 \
-  --learning_rate=0.001 \
-  --save_interval_secs=120 \
-  --save_summaries_secs=120 \
-  --log_every_n_steps=100 \
-  --optimizer=rmsprop \
-  --weight_decay=0.00004
+# # Fine-tune all the new layers for 1000 steps.
+# python train_image_classifier.py \
+#   --train_dir=${TRAIN_DIR}/all \
+#   --dataset_name=dog-vs-cat \
+#   --dataset_split_name=train \
+#   --val_split=0.2 \
+#   --dataset_dir=${DATASET_DIR} \
+#   --checkpoint_path=${TRAIN_DIR} \
+#   --model_name=resnet_v1_50 \
+#   --max_number_of_steps=1000 \
+#   --batch_size=32 \
+#   --learning_rate=0.001 \
+#   --save_interval_secs=120 \
+#   --save_summaries_secs=120 \
+#   --log_every_n_steps=100 \
+#   --optimizer=rmsprop \
+#   --weight_decay=0.00004
 
 
-# Run evaluation.
-python eval_image_classifier.py \
-  --checkpoint_path=${TRAIN_DIR}/all \
-  --eval_dir=${TRAIN_DIR}/all \
-  --dataset_name=dog-vs-cat \
-  --dataset_split_name=validation \
-  --dataset_dir=${DATASET_DIR} \
-  --model_name=resnet_v1_50
+# # Run evaluation.
+# python eval_image_classifier.py \
+#   --checkpoint_path=${TRAIN_DIR}/all \
+#   --eval_dir=${TRAIN_DIR}/all \
+#   --dataset_name=dog-vs-cat \
+#   --dataset_split_name=validation \
+#   --dataset_dir=${DATASET_DIR} \
+#   --model_name=resnet_v1_50
