@@ -32,8 +32,10 @@ from tensorflow.contrib import quantize as contrib_quantize
 from datasets import dataset_factory
 from nets import nets_factory
 from preprocessing import preprocessing_factory
-from metrics import _streaming_confusion_matrix_at_thresholds
-from metrics import streaming_curve_points, streaming_auc
+from metrics import f1_score
+from metrics import _streaming_confusion_matrix_at_thresholds, streaming_curve_points, streaming_auc
+from metrics import streaming_accuracy,streaming_precision, streaming_recall, streaming_recall_at_k
+from metrics import streaming_true_positives, streaming_true_negatives, streaming_false_positives, streaming_false_negatives
 
 tf.app.flags.DEFINE_integer(
     'batch_size', 100, 'The number of samples in each batch.')
@@ -177,30 +179,48 @@ def main(_):
     thresholds = np.arange(0, 1, 0.05).tolist()
 
     # Define the metrics:
-    names_to_values, names_to_updates = slim.metrics.aggregate_metric_map({
-        'Accuracy': slim.metrics.streaming_accuracy(predictions, labels),
-        'Precision': slim.metrics.streaming_precision(predictions, labels),
-        'Recall'   : slim.metrics.streaming_recall(predictions, labels),
-        'Recall_5': slim.metrics.streaming_recall_at_k(logits, labels, 5),
-        #'Confusion_matrix' : _streaming_confusion_matrix_at_thresholds(predictions, labels, thresholds),
-        'F1_score': slim.metrics.f1_score(predictions, labels),
-        'Auc'     : streaming_auc(predictions, labels),
-        'ROC_curve': streaming_curve_points(labels, predictions)
-    })
+    if dataset.num_classes > 2:
+      names_to_values, names_to_updates = slim.metrics.aggregate_metric_map({
+          'Accuracy': slim.metrics.streaming_accuracy(predictions, labels),
+          'Precision': slim.metrics.streaming_precision(predictions, labels),
+          'Recall'   : slim.metrics.streaming_recall(predictions, labels),
+          'Recall_5': slim.metrics.streaming_recall_at_k(logits, labels, 5),
+      })
+    else:
+      names_to_values, names_to_updates = slim.metrics.aggregate_metric_map({
+          'Accuracy': streaming_accuracy(predictions, labels),
+          'Precision': streaming_precision(predictions, labels),
+          'Recall'   : streaming_recall(predictions, labels),
+          'F1_score': f1_score(predictions, labels),
+          'Auc_ROC' : streaming_auc(predictions, labels, curve='ROC'),
+          'Auc_PR'  : streaming_auc(predictions, labels, curve='PR'),
+          'TP'      : streaming_true_positives(predictions, labels),
+          'TN'      : streaming_true_negatives(predictions, labels),
+          'FP'      : streaming_false_positives(predictions, labels),
+          'FN'      : streaming_false_negatives(predictions, labels),
+          # 'ROC_curve': streaming_curve_points(labels, predictions, curve='ROC'),
+          # 'PR_curve': streaming_curve_points(labels, predictions, curve='PR'),
+      })
 
-    # Print the summaries to screen.
-    for name, value in names_to_values.items():
-      summary_name = 'eval/%s' % name
-      # if name =='Confusion_matrix':
-      #   #op = tf.summary.tensor_summary(summary_name, value, collections=[])
-      #   op = tf.Print(value, summary_name)
-      if name == 'ROC_curve':
-        op = tf.summary.tensor_summary(summary_name, value, collections=[])
-        op = tf.Print(op, [value], summary_name)
-      else:
+    if dataset.num_classes > 2:
+      # Print the summaries to screen.
+      for name, value in names_to_values.items():
+        summary_name = 'evaluation_results/%s' % name
         op = tf.summary.scalar(summary_name, value, collections=[])
         op = tf.Print(op, [value], summary_name)
-      tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
+        tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
+    else:
+      # Print the summaries to screen.
+      for name, value in names_to_values.items():
+        summary_name = 'evaluation_results/%s' % name
+        if name in ('ROC_curve','PR_curve'):
+          op = tf.summary.tensor_summary(summary_name, value, collections=[])
+          op = tf.Print(op, [value], summary_name, summarize=9)
+        else:
+          op = tf.summary.scalar(summary_name, value, collections=[])
+          op = tf.Print(op, [value], summary_name)
+        tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
+        
     # TODO(sguada) use num_epochs=1
     if FLAGS.max_num_batches:
       num_batches = FLAGS.max_num_batches

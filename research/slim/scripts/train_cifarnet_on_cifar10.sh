@@ -43,7 +43,7 @@ python train_image_classifier.py \
   --dataset_dir=${DATASET_DIR} \
   --model_name=cifarnet \
   --preprocessing_name=cifarnet \
-  --max_number_of_steps=100000 \
+  --max_number_of_steps=1000 \
   --batch_size=128 \
   --save_interval_secs=120 \
   --save_summaries_secs=120 \
@@ -55,7 +55,7 @@ python train_image_classifier.py \
   --weight_decay=0.004
 
 # Run evaluation.
-python eval_image_classifier.py \
+python eval_image_classifier_.py \
   --checkpoint_path=${TRAIN_DIR} \
   --eval_dir=${TRAIN_DIR} \
   --dataset_name=cifar10 \
