@@ -34,7 +34,7 @@ SPLITS_TO_SIZES = {'train': None, 'validation': None}
 
 _ITEMS_TO_DESCRIPTIONS = {
     'image': 'A color image of varying size.',
-    'label': 'A single integer between 0 and 4',
+    'label': 'A single integer between 0 and C',
 }
 
 

@@ -31,10 +31,42 @@ import os
 from absl import flags
 import tensorflow.compat.v2 as tf
 from object_detection import model_lib_v2
+from dataset_tools.create_coco_tf_record_ import _create_tf_record_from_coco_annotations
+
 
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
+# ## dataset path
+flags.DEFINE_boolean(
+    'include_masks', False, 'Whether to include instance segmentations masks '
+    '(PNG encoded) in the result. default: False.')
+flags.DEFINE_string('train_image_dir', '', 'Training image directory.')
+flags.DEFINE_string('val_image_dir', '', 'Validation image directory.')
+flags.DEFINE_string('test_image_dir', '', 'Test image directory.')
+flags.DEFINE_string('train_annotations_file', '',
+                       'Training annotations JSON file.')
+flags.DEFINE_string('val_annotations_file', '',
+                       'Validation annotations JSON file.')
+flags.DEFINE_string('testdev_annotations_file', '',
+                       'Test-dev annotations JSON file.')
+flags.DEFINE_string('train_keypoint_annotations_file', '',
+                       'Training annotations JSON file.')
+flags.DEFINE_string('val_keypoint_annotations_file', '',
+                       'Validation annotations JSON file.')
+# DensePose is only available for coco 2014.
+flags.DEFINE_string('train_densepose_annotations_file', '',
+                       'Training annotations JSON file for DensePose.')
+flags.DEFINE_string('val_densepose_annotations_file', '',
+                       'Validation annotations JSON file for DensePose.')
+flags.DEFINE_string('output_dir', '/tmp/', 'Output data directory.')
+# Whether to only produce images/annotations on person class (for keypoint /
+# densepose task).
+flags.DEFINE_boolean('remove_non_person_annotations', False, 'Whether to '
+                        'remove all annotations for non-person objects.')
+flags.DEFINE_boolean('remove_non_person_images', False, 'Whether to '
+                        'remove all examples that do not contain a person.')
 
+## model
 flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
                     'file.')
 flags.DEFINE_integer('num_train_steps', None, 'Number of train steps.')
@@ -54,7 +86,7 @@ flags.DEFINE_string(
     '`checkpoint_dir` is provided, this binary operates in eval-only mode, '
     'writing resulting metrics to `model_dir`.')
 
-flags.DEFINE_integer('eval_timeout', 3600, 'Number of seconds to wait for an'
+flags.DEFINE_integer('eval_timeout', 120, 'Number of seconds to wait for an'
                      'evaluation checkpoint before exiting.')
 
 flags.DEFINE_bool('use_tpu', False, 'Whether the job is executing on a TPU.')
@@ -67,13 +99,53 @@ flags.DEFINE_integer(
     'MultiWorkerMirroredStrategy. When num_workers = 1 it uses '
     'MirroredStrategy.')
 flags.DEFINE_integer(
-    'checkpoint_every_n', 1000, 'Integer defining how often we checkpoint.')
+    'checkpoint_every_n', 200, 'Integer defining how often we checkpoint.')
 flags.DEFINE_boolean('record_summaries', True,
                      ('Whether or not to record summaries during'
                       ' training.'))
 
 FLAGS = flags.FLAGS
 
+def create_coco_tf_record():
+  assert FLAGS.train_image_dir, '`train_image_dir` missing.'
+  assert FLAGS.val_image_dir, '`val_image_dir` missing.'
+  assert FLAGS.test_image_dir, '`test_image_dir` missing.'
+  assert FLAGS.train_annotations_file, '`train_annotations_file` missing.'
+  assert FLAGS.val_annotations_file, '`val_annotations_file` missing.'
+  assert FLAGS.testdev_annotations_file, '`testdev_annotations_file` missing.'
+
+  if not tf.gfile.IsDirectory(FLAGS.output_dir):
+    tf.gfile.MakeDirs(FLAGS.output_dir)
+  train_output_path = os.path.join(FLAGS.output_dir, 'coco_train')
+  val_output_path = os.path.join(FLAGS.output_dir, 'coco_val')
+  testdev_output_path = os.path.join(FLAGS.output_dir, 'coco_testdev')
+
+  _create_tf_record_from_coco_annotations(
+      FLAGS.train_annotations_file,
+      FLAGS.train_image_dir,
+      train_output_path,
+      FLAGS.include_masks,
+      num_shards=10,
+      keypoint_annotations_file=FLAGS.train_keypoint_annotations_file,
+      densepose_annotations_file=FLAGS.train_densepose_annotations_file,
+      remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+      remove_non_person_images=FLAGS.remove_non_person_images)
+  _create_tf_record_from_coco_annotations(
+      FLAGS.val_annotations_file,
+      FLAGS.val_image_dir,
+      val_output_path,
+      FLAGS.include_masks,
+      num_shards=5,
+      keypoint_annotations_file=FLAGS.val_keypoint_annotations_file,
+      densepose_annotations_file=FLAGS.val_densepose_annotations_file,
+      remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+      remove_non_person_images=FLAGS.remove_non_person_images)
+  _create_tf_record_from_coco_annotations(
+      FLAGS.testdev_annotations_file,
+      FLAGS.test_image_dir,
+      testdev_output_path,
+      FLAGS.include_masks,
+      num_shards=5)
 
 def main(unused_argv):
   flags.mark_flag_as_required('model_dir')
@@ -89,7 +161,7 @@ def main(unused_argv):
         sample_1_of_n_eval_on_train_examples=(
             FLAGS.sample_1_of_n_eval_on_train_examples),
         checkpoint_dir=FLAGS.checkpoint_dir,
-        wait_interval=300, timeout=FLAGS.eval_timeout)
+        wait_interval=60, timeout=FLAGS.eval_timeout)
   else:
     if FLAGS.use_tpu:
       # TPU is automatically inferred if tpu_name is None and
@@ -114,4 +186,5 @@ def main(unused_argv):
           record_summaries=FLAGS.record_summaries)
 
 if __name__ == '__main__':
+  create_coco_tf_record()
   tf.compat.v1.app.run()

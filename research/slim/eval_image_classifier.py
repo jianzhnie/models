@@ -202,6 +202,7 @@ def main(_):
           # 'PR_curve': streaming_curve_points(labels, predictions, curve='PR'),
       })
 
+    labels_to_names = dataset.labels_to_names
     if dataset.num_classes > 2:
       # Print the summaries to screen.
       for name, value in names_to_values.items():
@@ -212,15 +213,24 @@ def main(_):
     else:
       # Print the summaries to screen.
       for name, value in names_to_values.items():
-        summary_name = 'evaluation_results/%s' % name
         if name in ('ROC_curve','PR_curve'):
+          summary_name = 'evaluation_results/%s' % name
           op = tf.summary.tensor_summary(summary_name, value, collections=[])
           op = tf.Print(op, [value], summary_name, summarize=9)
         else:
+          if name =='TP':
+            name = name+  ': Real-%s, Pred-%s' % (labels_to_names[1], labels_to_names[1])
+          if name =='FN':
+            name = name + ': Real-%s, Pred-%s' % (labels_to_names[1], labels_to_names[0])
+          if name =='FP':
+            name = name + ': Real-%s, Pred-%s' % (labels_to_names[0], labels_to_names[1])
+          if name =='TN':
+            name = name + ': Real-%s, Pred-%s' % (labels_to_names[0], labels_to_names[0])
+          summary_name = 'evaluation_results/%s' % name
           op = tf.summary.scalar(summary_name, value, collections=[])
           op = tf.Print(op, [value], summary_name)
         tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
-        
+
     # TODO(sguada) use num_epochs=1
     if FLAGS.max_num_batches:
       num_batches = FLAGS.max_num_batches
