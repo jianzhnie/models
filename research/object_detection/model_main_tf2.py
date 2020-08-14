@@ -41,7 +41,10 @@ logger.setLevel(logging.INFO)
 
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
-# ## dataset path
+
+#######################
+# Dataset Flags #
+#######################
 flags1 = tf1.app.flags
 tf1.flags.DEFINE_boolean(
     'include_masks', False, 'Whether to include instance segmentations masks '
@@ -73,6 +76,27 @@ tf1.flags.DEFINE_boolean('remove_non_person_images', False, 'Whether to '
                         'remove all examples that do not contain a person.')
 
 ## model
+#######################
+# Learning Rate Flags #
+#######################
+flags.DEFINE_string('data_path', None, 'The directory where the original image dataset files are stored.')
+flags.DEFINE_string(
+    'output_path', None, 'Directory where checkpoints and event logs are written to.')
+flags.DEFINE_string(
+    'dataset_name', 'coco', 'The name of the dataset to load.')
+flags.DEFINE_integer(
+    'batch_size', 32, 'The number of samples in each batch.')
+flags.DEFINE_integer(
+    "num_classes", 80,  help="Number of training classes.")
+flags.DEFINE_string(
+    'pretrained_checkpoint_path', None,
+    'The path to a checkpoint from which to fine-tune.')
+flags.DEFINE_integer(
+    'log_every_n_steps', 10,
+    'The frequency with which logs are print.')
+flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
+flags.DEFINE_float(
+    'weight_decay', 0.00004, 'The weight decay on the model weights.')
 flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
                     'file.')
 flags.DEFINE_integer('num_train_steps', None, 'Number of train steps.')
