@@ -154,7 +154,7 @@ def create_coco_tf_record():
       FLAGS.train_image_dir,
       train_output_path,
       FLAGS.include_masks,
-      num_shards=100,
+      num_shards=1,
       keypoint_annotations_file=FLAGS.train_keypoint_annotations_file,
       densepose_annotations_file=FLAGS.train_densepose_annotations_file,
       remove_non_person_annotations=FLAGS.remove_non_person_annotations,
