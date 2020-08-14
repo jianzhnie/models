@@ -49,6 +49,9 @@ from object_detection.dataset_tools import tf_record_creation_util
 from object_detection.utils import dataset_util
 from object_detection.utils import label_map_util
 
+logger = tf.get_logger()
+logger.setLevel(logging.INFO)
+
 
 _COCO_KEYPOINT_NAMES = [
     b'nose', b'left_eye', b'right_eye', b'left_ear', b'right_ear',
