@@ -34,7 +34,7 @@ import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2
 from object_detection import model_lib_v2
 from dataset_tools.create_coco_tf_record_ import _create_tf_record_from_coco_annotations
-
+from dataset_tools.build_config import update_configs
 
 logger = tf.get_logger()
 logger.setLevel(logging.INFO)
@@ -86,15 +86,12 @@ flags.DEFINE_string(
     'dataset_name', 'coco', 'The name of the dataset to load.')
 flags.DEFINE_integer(
     'batch_size', 2, 'The number of samples in each batch.')
-flags.DEFINE_integer(
-    "num_classes", 90,  help="Number of training classes.")
-flags.DEFINE_string(
-    'fine_tune_checkpoint', 'datasets/work_dirs/checkpoints/efficientnet_b0/ckpt-0',
+flags.DEFINE_integer("num_classes", 90,  "Number of training classes.")
+flags.DEFINE_string('fine_tune_checkpoint', 'datasets/work_dirs/checkpoints/efficientnet_b0/ckpt-0',
     'The path to a checkpoint from which to fine-tune.')
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_string('label_map_path', 'data/mscoco_label_map.pbtxt', 'Path to  label map file.')
-flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
-                    'file.')
+flags.DEFINE_string('label_map_path', 'data/mscoco_label_map.pbtxt', 'Path to label map file.')
+flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config file.')
 flags.DEFINE_integer('num_train_steps', 1000, 'Number of train steps.')
 flags.DEFINE_bool('eval_on_train_data', False, 'Enable evaluating on train '
                                                'data (only supported in distributed training).')
@@ -130,6 +127,45 @@ flags.DEFINE_boolean('record_summaries', True,
                      ('Whether or not to record summaries during'
                       ' training.'))
 
+
+def create_custom_tf_record(FLAGS):
+  assert os.path.exists(FLAGS.data_path), 'dataset path do not exits.'
+
+  if not tf.gfile.IsDirectory(FLAGS.output_path):
+    tf.gfile.MakeDirs(FLAGS.output_path)
+
+  train_output_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_train_.record')
+  val_output_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_val_.record')
+    
+  train_annotations_file = os.path.join(FLAGS.data_path, FLAGS.train_annotations_file)
+  train_image_dir = os.path.join(FLAGS.data_path, FLAGS.train_image_dir)
+
+  _create_tf_record_from_coco_annotations(
+      train_annotations_file,
+      train_image_dir,
+      train_output_path,
+      FLAGS.include_masks,
+      num_shards=1,
+      keypoint_annotations_file=FLAGS.train_keypoint_annotations_file,
+      densepose_annotations_file=FLAGS.train_densepose_annotations_file,
+      remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+      remove_non_person_images=FLAGS.remove_non_person_images)
+
+  if FLAGS.val_annotations_file is not None:
+    val_annotations_file = os.path.join(FLAGS.data_path, FLAGS.val_annotations_file)
+    val_image_dir = os.path.join(FLAGS.data_path, FLAGS.val_image_dir)
+
+    _create_tf_record_from_coco_annotations(
+        val_annotations_file,
+        val_image_dir,
+        val_output_path,
+        FLAGS.include_masks,
+        num_shards=1,
+        keypoint_annotations_file=FLAGS.val_keypoint_annotations_file,
+        densepose_annotations_file=FLAGS.val_densepose_annotations_file,
+        remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+        remove_non_person_images=FLAGS.remove_non_person_images)
+    
 def create_coco_tf_record():
   assert FLAGS.train_image_dir, '`train_image_dir` missing.'
   assert FLAGS.val_image_dir, '`val_image_dir` missing.'
@@ -150,7 +186,7 @@ def create_coco_tf_record():
       FLAGS.train_image_dir,
       train_output_path,
       FLAGS.include_masks,
-      num_shards=1,
+      num_shards=100,
       keypoint_annotations_file=FLAGS.train_keypoint_annotations_file,
       densepose_annotations_file=FLAGS.train_densepose_annotations_file,
       remove_non_person_annotations=FLAGS.remove_non_person_annotations,
@@ -177,10 +213,19 @@ def main(unused_argv):
   flags.mark_flag_as_required('model_dir')
   flags.mark_flag_as_required('pipeline_config_path')
   tf2.config.set_soft_device_placement(True)
+  update_configs(pipeline_config_path=FLAGS.pipeline_config_path,
+            model_dir=FLAGS.model_dir,
+            train_steps=FLAGS.num_train_steps,
+            batch_size=FLAGS.batch_size,
+            learning_rate=FLAGS.learning_rate,
+            fine_tune_checkpoint=FLAGS.fine_tune_checkpoint,
+            label_map_path=FLAGS.label_map_path,
+            num_classes=FLAGS.num_classes,)
 
+  pipeline_config_path = os.path.join(FLAGS.model_dir,'pipeline.config')
   if FLAGS.checkpoint_dir:
     model_lib_v2.eval_continuously(
-        pipeline_config_path=FLAGS.pipeline_config_path,
+        pipeline_config_path=pipeline_config_path,
         model_dir=FLAGS.model_dir,
         train_steps=FLAGS.num_train_steps,
         sample_1_of_n_eval_examples=FLAGS.sample_1_of_n_eval_examples,
@@ -204,21 +249,21 @@ def main(unused_argv):
 
     with strategy.scope():
         model_lib_v2.train_loop(
-            pipeline_config_path=FLAGS.pipeline_config_path,
+            pipeline_config_path=pipeline_config_path,
             model_dir=FLAGS.model_dir,
             train_steps=FLAGS.num_train_steps,
             batch_size=FLAGS.batch_size,
             learning_rate=FLAGS.learning_rate,
-            fine_tune_checkpoint=FLAGS.fine_tune_checkpoint,
             label_map_path=FLAGS.label_map_path,
             num_classes=FLAGS.num_classes,
             use_tpu=FLAGS.use_tpu,
-            save_final_config=True,
+            save_final_config=False,
             checkpoint_every_n=FLAGS.checkpoint_every_n,
             record_summaries=FLAGS.record_summaries)
 
+
 if __name__ == '__main__':
-#   FLAGS = flags1.FLAGS
-#   tf.app.run(create_coco_tf_record())
+  # FLAGS = flags1.FLAGS
+  # tf.app.run(create_coco_tf_record())
   FLAGS = flags.FLAGS
   tf2.compat.v1.app.run()

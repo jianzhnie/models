@@ -12,7 +12,7 @@ OUTPUT_DIR=datasets/coco/
 PIPELINE_CONFIG_PATH=configs/tf2/ssd_efficientdet_d0_512x512_coco17_gpu.config 
 MODEL_DIR=datasets/work_dirs/coco/ssd_efficientdet_d0
 
-python model_main_tf2.py  --logtostderr \
+python model_main_tf2.py \
     --train_image_dir=${TRAIN_IMAGE_DIR} \
     --val_image_dir=${VAL_IMAGE_DIR} \
     --test_image_dir=${TEST_IMAGE_DIR} \

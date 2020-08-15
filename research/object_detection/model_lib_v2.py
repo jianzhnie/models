@@ -417,7 +417,6 @@ def train_loop(
     train_steps=None,
     batch_size=None,
     learning_rate=None,
-    fine_tune_checkpoint=None,
     label_map_path=None,
     num_classes=None,
     use_tpu=False,
@@ -471,7 +470,6 @@ def train_loop(
       'train_steps': train_steps,
       'batch_size' : batch_size,
       'learning_rate': learning_rate,
-      'fine_tune_checkpoint' : fine_tune_checkpoint,
       'label_map_path': label_map_path,
       'num_classes': num_classes,
       'use_bfloat16': configs['train_config'].use_bfloat16 and use_tpu
