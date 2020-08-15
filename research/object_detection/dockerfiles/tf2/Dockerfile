@@ -23,7 +23,7 @@ RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
     apt-get update -y && apt-get install google-cloud-sdk -y
 
 ## Install tensorflow models
-RUN git clone https://github.com/tensorflow/models /models
+RUN git clone https://github.com/jianzhnie/models /models
 
 # Compile protobuf configs
 RUN (cd /models/research/ && protoc object_detection/protos/*.proto --python_out=.)

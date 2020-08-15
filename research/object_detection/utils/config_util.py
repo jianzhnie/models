@@ -603,7 +603,7 @@ def _maybe_update_config_with_key_value(configs, key, value):
   elif field_name == "train_steps":
     _update_train_steps(configs, value)
   elif field_name == "fine_tune_checkpoint":
-    _update_fine_tune_checkpoint_type(configs, value)
+    _update_fine_tune_checkpoint(configs, value)
   elif field_name == "label_map_path":
     _update_label_map_path(configs, value)
   elif field_name == "mask_type":
@@ -933,7 +933,7 @@ def _update_train_steps(configs, train_steps):
   configs["train_config"].num_steps = int(train_steps)
 
 
-def _update_fine_tune_checkpoint_type(configs, fine_tune_checkpoint):
+def _update_fine_tune_checkpoint(configs, fine_tune_checkpoint):
   """Set `fine_tune_checkpoint_type` using `from_detection_checkpoint`.
 
   `train_config.from_detection_checkpoint` field is deprecated. For backward
