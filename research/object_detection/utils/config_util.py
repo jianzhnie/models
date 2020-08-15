@@ -602,6 +602,8 @@ def _maybe_update_config_with_key_value(configs, key, value):
     _update_focal_loss_alpha(configs, value)
   elif field_name == "train_steps":
     _update_train_steps(configs, value)
+  elif field_name == "fine_tune_checkpoint":
+    _update_fine_tune_checkpoint_type(configs, value)
   elif field_name == "label_map_path":
     _update_label_map_path(configs, value)
   elif field_name == "mask_type":
@@ -929,6 +931,20 @@ def _update_focal_loss_alpha(configs, alpha):
 def _update_train_steps(configs, train_steps):
   """Updates `configs` to reflect new number of training steps."""
   configs["train_config"].num_steps = int(train_steps)
+
+
+def _update_fine_tune_checkpoint_type(configs, fine_tune_checkpoint):
+  """Set `fine_tune_checkpoint_type` using `from_detection_checkpoint`.
+
+  `train_config.from_detection_checkpoint` field is deprecated. For backward
+  compatibility, this function sets `train_config.fine_tune_checkpoint_type`
+  based on `train_config.from_detection_checkpoint`.
+
+  Args:
+    train_config: train_pb2.TrainConfig proto object.
+
+  """
+  configs["train_config"].fine_tune_checkpoint = fine_tune_checkpoint
 
 
 def _update_all_eval_input_configs(configs, field, value):
