@@ -189,7 +189,7 @@ class ExportInferenceGraphTest(tf.test.TestCase, parameterized.TestCase):
           trained_checkpoint_dir=tmp_dir,
           output_directory=output_directory)
 
-      saved_model_path = os.path.join(output_directory, 'saved_model')
+      saved_model_path = os.path.join(output_directory, '1')
       detect_fn = tf.saved_model.load(saved_model_path)
       image = self.get_dummy_input(input_type)
       detections = detect_fn(tf.constant(image))

@@ -196,7 +196,6 @@ DETECTION_MODULE_MAP = {
     'float_image_tensor': DetectionFromFloatImageModule
 }
 
-
 def export_inference_graph(input_type,
                            pipeline_config,
                            trained_checkpoint_dir,
@@ -205,6 +204,7 @@ def export_inference_graph(input_type,
                            side_input_shapes='',
                            side_input_types='',
                            side_input_names=''):
+
   """Exports inference graph for the model specified in the pipeline config.
 
   This function creates `output_directory` if it does not already exist,
@@ -228,7 +228,7 @@ def export_inference_graph(input_type,
     ValueError: if input_type is invalid.
   """
   output_checkpoint_directory = os.path.join(output_directory, 'checkpoint')
-  output_saved_model_directory = os.path.join(output_directory, 'saved_model')
+  output_saved_model_directory = os.path.join(output_directory, '1')
 
   detection_model = model_builder.build(pipeline_config.model,
                                         is_training=False)
@@ -262,7 +262,6 @@ def export_inference_graph(input_type,
   exported_checkpoint_manager = tf.train.CheckpointManager(
       ckpt, output_checkpoint_directory, max_to_keep=1)
   exported_checkpoint_manager.save(checkpoint_number=0)
-
   tf.saved_model.save(detection_module,
                       output_saved_model_directory,
                       signatures=concrete_function)
