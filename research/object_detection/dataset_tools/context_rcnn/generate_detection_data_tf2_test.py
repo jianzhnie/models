@@ -128,7 +128,7 @@ class GenerateDetectionDataTest(tf.test.TestCase):
     tmp_dir = self.get_temp_dir()
     self._save_checkpoint_from_mock_model(tmp_dir)
     output_directory = os.path.join(tmp_dir, 'output')
-    saved_model_path = os.path.join(output_directory, 'saved_model')
+    saved_model_path = os.path.join(output_directory, '1')
     tf.io.gfile.makedirs(output_directory)
     with mock.patch.object(
         model_builder, 'build', autospec=True) as mock_builder:
@@ -140,7 +140,7 @@ class GenerateDetectionDataTest(tf.test.TestCase):
           pipeline_config=pipeline_config,
           trained_checkpoint_dir=tmp_dir,
           output_directory=output_directory)
-      saved_model_path = os.path.join(output_directory, 'saved_model')
+      saved_model_path = os.path.join(output_directory, '1')
     return saved_model_path
 
   def _create_tf_example(self):

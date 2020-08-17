@@ -46,6 +46,7 @@ except ImportError:
 
 MODEL_BUILD_UTIL_MAP = model_lib.MODEL_BUILD_UTIL_MAP
 
+
 RESTORE_MAP_ERROR_TEMPLATE = (
     'Since we are restoring a v2 style checkpoint'
     ' restore_map was expected to return a (str -> Model) mapping,'
@@ -415,13 +416,9 @@ def train_loop(
     model_dir,
     config_override=None,
     train_steps=None,
-    batch_size=None,
-    learning_rate=None,
-    label_map_path=None,
-    num_classes=None,
     use_tpu=False,
-    save_final_config=True,
-    checkpoint_every_n=2000,
+    save_final_config=False,
+    checkpoint_every_n=1000,
     checkpoint_max_to_keep=7,
     record_summaries=True,
     **kwargs):
@@ -468,15 +465,10 @@ def train_loop(
       pipeline_config_path, config_override=config_override)
   kwargs.update({
       'train_steps': train_steps,
-      'batch_size' : batch_size,
-      'learning_rate': learning_rate,
-      'label_map_path': label_map_path,
-      'num_classes': num_classes,
       'use_bfloat16': configs['train_config'].use_bfloat16 and use_tpu
   })
   configs = merge_external_params_with_configs(
       configs, None, kwargs_dict=kwargs)
-
   model_config = configs['model']
   train_config = configs['train_config']
   train_input_config = configs['train_input_config']

@@ -97,7 +97,7 @@ from absl import flags
 
 import tensorflow.compat.v2 as tf
 from google.protobuf import text_format
-from object_detection import exporter_lib_v2
+from exporter_lib_v2 import export_inference_graph
 from object_detection.protos import pipeline_pb2
 
 tf.enable_v2_behavior()
@@ -149,7 +149,7 @@ def main(_):
   with tf.io.gfile.GFile(FLAGS.pipeline_config_path, 'r') as f:
     text_format.Merge(f.read(), pipeline_config)
   text_format.Merge(FLAGS.config_override, pipeline_config)
-  exporter_lib_v2.export_inference_graph(
+  export_inference_graph(
       FLAGS.input_type, pipeline_config, FLAGS.trained_checkpoint_dir,
       FLAGS.output_directory, FLAGS.use_side_inputs, FLAGS.side_input_shapes,
       FLAGS.side_input_types, FLAGS.side_input_names)
