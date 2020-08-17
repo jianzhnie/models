@@ -35,52 +35,57 @@ RESTORE_MAP_ERROR_TEMPLATE = (
 
 MODEL_BUILD_UTIL_MAP = model_lib.MODEL_BUILD_UTIL_MAP
 
+
 def update_configs(pipeline_config_path=None,
-    model_dir=None,
-    config_override=None,
-    train_steps=None,
-    batch_size=None,
-    learning_rate=None,
-    fine_tune_checkpoint=None,
-    label_map_path=None,
-    num_classes=None):
-  """Trains a model using eager + functions.
+                   model_dir=None,
+                   config_override=None,
+                   train_steps=None,
+                   batch_size=None,
+                   learning_rate=None,
+                   fine_tune_checkpoint=None,
+                   label_map_path=None,
+                   num_classes=None,
+                   train_input_path=None,
+                   eval_input_path=None, ):
+    """Trains a model using eager + functions.
 
-  This method:
-    1. Processes the pipeline configs
-    2. (Optionally) saves the as-run config
-    3. Builds the model & optimizer
-    4. Gets the training input data
-    5. Loads a fine-tuning detection or classification checkpoint if requested
-    6. Loops over the train data, executing distributed training steps inside
-       tf.functions.
-    7. Checkpoints the model every `checkpoint_every_n` training steps.
-    8. Logs the training metrics as TensorBoard summaries.
-  """
+    This method:
+      1. Processes the pipeline configs
+      2. (Optionally) saves the as-run config
+      3. Builds the model & optimizer
+      4. Gets the training input data
+      5. Loads a fine-tuning detection or classification checkpoint if requested
+      6. Loops over the train data, executing distributed training steps inside
+         tf.functions.
+      7. Checkpoints the model every `checkpoint_every_n` training steps.
+      8. Logs the training metrics as TensorBoard summaries.
+    """
 
-  ## Parse the configs
-  get_configs_from_pipeline_file = MODEL_BUILD_UTIL_MAP[
-      'get_configs_from_pipeline_file']
-  merge_external_params_with_configs = MODEL_BUILD_UTIL_MAP[
-      'merge_external_params_with_configs']
-  create_pipeline_proto_from_configs = MODEL_BUILD_UTIL_MAP[
-      'create_pipeline_proto_from_configs']
+    ## Parse the configs
+    get_configs_from_pipeline_file = MODEL_BUILD_UTIL_MAP[
+        'get_configs_from_pipeline_file']
+    merge_external_params_with_configs = MODEL_BUILD_UTIL_MAP[
+        'merge_external_params_with_configs']
+    create_pipeline_proto_from_configs = MODEL_BUILD_UTIL_MAP[
+        'create_pipeline_proto_from_configs']
 
-  configs = get_configs_from_pipeline_file(
-      pipeline_config_path, config_override=None)
-  
-  kwargs = {}
-  kwargs.update({
-      'train_steps': train_steps,
-      'batch_size' : batch_size,
-      'learning_rate': learning_rate,
-      'fine_tune_checkpoint' : fine_tune_checkpoint,
-      'label_map_path': label_map_path,
-      'num_classes': num_classes,
-  })
-  configs = merge_external_params_with_configs(
-      configs, None, kwargs_dict=kwargs)
+    configs = get_configs_from_pipeline_file(
+        pipeline_config_path, config_override=None)
 
-  # Write the as-run pipeline config to disk.
-  pipeline_config_final = create_pipeline_proto_from_configs(configs)
-  config_util.save_pipeline_config(pipeline_config_final, model_dir)
+    kwargs = {}
+    kwargs.update({
+        'train_steps': train_steps,
+        'batch_size': batch_size,
+        'learning_rate': learning_rate,
+        'fine_tune_checkpoint': fine_tune_checkpoint,
+        'label_map_path': label_map_path,
+        'num_classes': num_classes,
+        'train_input_path': train_input_path,
+        'eval_input_path': eval_input_path
+    })
+    configs = merge_external_params_with_configs(
+        configs, None, kwargs_dict=kwargs)
+
+    # Write the as-run pipeline config to disk.
+    pipeline_config_final = create_pipeline_proto_from_configs(configs)
+    config_util.save_pipeline_config(pipeline_config_final, model_dir)
