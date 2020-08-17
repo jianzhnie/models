@@ -46,7 +46,7 @@ def update_configs(pipeline_config_path=None,
                    label_map_path=None,
                    num_classes=None,
                    train_input_path=None,
-                   eval_input_path=None, ):
+                   eval_input_path=None):
     """Trains a model using eager + functions.
 
     This method:
@@ -86,6 +86,9 @@ def update_configs(pipeline_config_path=None,
     configs = merge_external_params_with_configs(
         configs, None, kwargs_dict=kwargs)
 
+    ## update fine_tune_checkpoint
+    print("************* force update the fine_tune_checkpoint")
+    configs["train_config"].fine_tune_checkpoint = fine_tune_checkpoint
     # Write the as-run pipeline config to disk.
     pipeline_config_final = create_pipeline_proto_from_configs(configs)
     config_util.save_pipeline_config(pipeline_config_final, model_dir)

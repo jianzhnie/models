@@ -28,14 +28,16 @@ python model_main_tf2.py -- \
   --alsologtostderr
 """
 import os
+import shutil
 from absl import flags
 import logging
 import tensorflow.compat.v1 as tf
 import tensorflow.compat.v2 as tf2
 from object_detection import model_lib_v2
 from google.protobuf import text_format
-from object_detection import exporter_lib_v2
+from exporter_lib_v2 import export_inference_graph
 from object_detection.protos import pipeline_pb2
+
 
 from dataset_tools.create_coco_tf_record_ import _create_tf_record_from_coco_annotations
 from dataset_tools.build_config import update_configs
@@ -102,9 +104,6 @@ flags.DEFINE_integer('sample_1_of_n_eval_on_train_examples', 5, 'Will sample '
                                                                 'one of every n train input examples for evaluation, '
                                                                 'where n is provided. This is only used if '
                                                                 '`eval_training_data` is True.')
-# flags.DEFINE_string(
-#     'model_dir', None, 'Path to output model directory '
-#                        'where event and checkpoint files will be written.')
 flags.DEFINE_string(
     'checkpoint_dir', None, 'Path to directory holding a checkpoint.  If '
                             '`checkpoint_dir` is provided, this binary operates in eval-only mode, '
@@ -153,6 +152,9 @@ flags.DEFINE_string('side_input_names', '',
                     'strings. This flag is required if using side inputs.')
 
 
+FLAGS = flags.FLAGS
+
+
 def create_label_map(train_annotations_file):
     import json
     data = json.load(open(train_annotations_file, 'r'))
@@ -164,28 +166,29 @@ def create_label_map(train_annotations_file):
             f.write('item{\n' + 'name:"' + categorie['name'] + '"\nid:' + str(categorie['id']) + '\ndisplay_name:"' +
                     categorie['name'] + '"\n}')
 
-
-
 def creat_tf_record():
     if FLAGS.dataset_name == 'coco':
         create_coco_tf_record()
     else:
         create_custom_tf_record()
 
+
 def create_custom_tf_record():
     assert os.path.exists(FLAGS.data_path), 'dataset path do not exits.'
 
-    if not tf.gfile.IsDirectory(FLAGS.output_path):
-        tf.gfile.MakeDirs(FLAGS.output_path)
-
-    train_output_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_train.record')
-    val_output_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_val.record')
+    train_output_path = os.path.join(FLAGS.output_path, 'tf_record', FLAGS.dataset_name + '_train.record')
+    val_output_path = os.path.join(FLAGS.output_path, 'tf_record', FLAGS.dataset_name + '_val.record')
 
     train_annotations_file = os.path.join(FLAGS.data_path, "format_coco/annotations/instance.json")
     train_image_dir = os.path.join(FLAGS.data_path, "format_coco/images")
 
     val_annotations_file = os.path.join(FLAGS.data_path, "format_coco/annotations/instance.json")
     val_image_dir = os.path.join(FLAGS.data_path, "format_coco/images")
+
+    output_tfrecord_dir = os.path.join(FLAGS.output_path, 'tf_record')
+    if not tf.gfile.IsDirectory(output_tfrecord_dir):
+        tf.gfile.MakeDirs(output_tfrecord_dir)
+    
 
     _create_tf_record_from_coco_annotations(
         train_annotations_file,
@@ -209,10 +212,9 @@ def create_custom_tf_record():
         remove_non_person_annotations=FLAGS.remove_non_person_annotations,
         remove_non_person_images=FLAGS.remove_non_person_images)
 
-    FLAGS.train_input_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_train.record-?????-of-00001')
-    FLAGS.eval_input_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_val.record-?????-of-00001')
+    FLAGS.train_input_path = os.path.join(output_tfrecord_dir, FLAGS.dataset_name + '_train.record-?????-of-00001')
+    FLAGS.eval_input_path = os.path.join(output_tfrecord_dir, FLAGS.dataset_name + '_val.record-?????-of-00001')
     create_label_map(train_annotations_file)
-
 
 
 def create_coco_tf_record():
@@ -227,12 +229,13 @@ def create_coco_tf_record():
     testdev_annotations_file = os.path.join(FLAGS.data_path , "annotations/instances_val2017.json")
     test_image_dir = os.path.join(FLAGS.data_path , "val2017/")
 
-    if not tf.gfile.IsDirectory(FLAGS.output_path):
-        tf.gfile.MakeDirs(FLAGS.output_path)
+    output_tfrecord_dir = os.path.join(FLAGS.output_path, 'tf_record')
+    if not tf.gfile.IsDirectory(output_tfrecord_dir):
+        tf.gfile.MakeDirs(output_tfrecord_dir)
 
-    train_output_path = os.path.join(FLAGS.output_path, 'coco_train.record')
-    val_output_path = os.path.join(FLAGS.output_path, 'coco_val.record')
-    testdev_output_path = os.path.join(FLAGS.output_path, 'coco_testdev.record')
+    train_output_path = os.path.join(FLAGS.output_path, 'tf_record', 'coco_train.record')
+    val_output_path = os.path.join(FLAGS.output_path, 'tf_record', 'coco_val.record')
+    testdev_output_path = os.path.join(FLAGS.output_path,'tf_record', 'coco_testdev.record')
 
     _create_tf_record_from_coco_annotations(
         train_annotations_file,
@@ -261,26 +264,37 @@ def create_coco_tf_record():
         FLAGS.include_masks,
         num_shards=50)
 
+    FLAGS.train_input_path = os.path.join(output_tfrecord_dir, FLAGS.dataset_name + '_train.record-?????-of-00100')
+    FLAGS.eval_input_path = os.path.join(output_tfrecord_dir, FLAGS.dataset_name + '_val.record-?????-of-00050')
 
-FLAGS = flags.FLAGS
+    create_label_map(train_annotations_file)
 
 
 def remove_prev_models():
     # 刪除之前的checkponit文件夹
-    if os.path.isdir(FLAGS.output_path):
-        files = os.listdir(FLAGS.output_path)
-        for f in files:
-            if "ckpt" in f or 'check' in f:
-                path = os.path.join(FLAGS.output_path, f)
-                if not os.path.isdir(path):
-                    os.remove(os.path.join(FLAGS.output_path, f))
+    if os.path.exists(FLAGS.output_path):
+        shutil.rmtree(FLAGS.output_path)
+        os.makedirs(FLAGS.output_path)
+
+
+def export_model():
+    pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+    with tf2.io.gfile.GFile(FLAGS.pipeline_config_path, 'r') as f:
+        text_format.Merge(f.read(), pipeline_config)
+    text_format.Merge(FLAGS.config_override, pipeline_config)
+    output_directory = os.path.join(FLAGS.output_path, 'export')
+    export_inference_graph(
+        FLAGS.input_type, pipeline_config, FLAGS.output_path,
+        output_directory, FLAGS.use_side_inputs, FLAGS.side_input_shapes,
+        FLAGS.side_input_types, FLAGS.side_input_names)
 
 
 def main(unused_argv):
+    remove_prev_models()
+    flags.mark_flag_as_required('data_path')
     flags.mark_flag_as_required('output_path')
     flags.mark_flag_as_required('dataset_name')
     tf2.config.set_soft_device_placement(True)
-    remove_prev_models()
     creat_tf_record()
     update_configs(pipeline_config_path=FLAGS.pipeline_config_path,
                    model_dir=FLAGS.output_path,
@@ -328,17 +342,25 @@ def main(unused_argv):
                 use_tpu=FLAGS.use_tpu,
                 checkpoint_every_n=FLAGS.checkpoint_every_n,
                 record_summaries=FLAGS.record_summaries)
+    
+
+    #######################
+    # Export models #
+    #######################
+    export_model()
+
 
     ####
     # Export models
     ####
-    print(
-        f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path} --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')}")
-    os.system(
-        f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path} --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')}")
+
+    # print(
+    #     f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path} --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')}")
+    # os.system(
+    #     f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path} --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')}")
+
 
 
 if __name__ == '__main__':
     # TODO
-    # finetuneing配置文件修改
     tf2.compat.v1.app.run()
