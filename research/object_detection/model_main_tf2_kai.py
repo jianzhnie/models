@@ -210,22 +210,27 @@ def create_custom_tf_record():
 
 
 def create_coco_tf_record():
-    assert FLAGS.train_image_dir, '`train_image_dir` missing.'
-    assert FLAGS.val_image_dir, '`val_image_dir` missing.'
-    assert FLAGS.test_image_dir, '`test_image_dir` missing.'
-    assert FLAGS.train_annotations_file, '`train_annotations_file` missing.'
-    assert FLAGS.val_annotations_file, '`val_annotations_file` missing.'
-    assert FLAGS.testdev_annotations_file, '`testdev_annotations_file` missing.'
+    assert os.path.exists(FLAGS.data_path), 'dataset path do not exits.'
+
+    train_annotations_file = os.path.join(FLAGS.data_path , "annotations/instances_val2017.json")
+    train_image_dir = os.path.join(FLAGS.data_path , "val2017")
+
+    val_annotations_file = os.path.join(FLAGS.data_path , "annotations/instances_val2017.json")
+    val_image_dir = os.path.join(FLAGS.data_path , "val2017")
+
+    testdev_annotations_file = os.path.join(FLAGS.data_path , "annotations/instances_val2017.json")
+    test_image_dir = os.path.join(FLAGS.data_path , "val2017/")
 
     if not tf.gfile.IsDirectory(FLAGS.output_path):
         tf.gfile.MakeDirs(FLAGS.output_path)
+
     train_output_path = os.path.join(FLAGS.output_path, 'coco_train.record')
     val_output_path = os.path.join(FLAGS.output_path, 'coco_val.record')
     testdev_output_path = os.path.join(FLAGS.output_path, 'coco_testdev.record')
 
     _create_tf_record_from_coco_annotations(
-        FLAGS.train_annotations_file,
-        FLAGS.train_image_dir,
+        train_annotations_file,
+        train_image_dir,
         train_output_path,
         FLAGS.include_masks,
         num_shards=100,
@@ -234,8 +239,8 @@ def create_coco_tf_record():
         remove_non_person_annotations=FLAGS.remove_non_person_annotations,
         remove_non_person_images=FLAGS.remove_non_person_images)
     _create_tf_record_from_coco_annotations(
-        FLAGS.val_annotations_file,
-        FLAGS.val_image_dir,
+        val_annotations_file,
+        val_image_dir,
         val_output_path,
         FLAGS.include_masks,
         num_shards=50,
@@ -244,8 +249,8 @@ def create_coco_tf_record():
         remove_non_person_annotations=FLAGS.remove_non_person_annotations,
         remove_non_person_images=FLAGS.remove_non_person_images)
     _create_tf_record_from_coco_annotations(
-        FLAGS.testdev_annotations_file,
-        FLAGS.test_image_dir,
+        testdev_annotations_file,
+        test_image_dir,
         testdev_output_path,
         FLAGS.include_masks,
         num_shards=50)
@@ -268,10 +273,10 @@ def main(unused_argv):
                    eval_input_path=FLAGS.eval_input_path,
                    num_classes=FLAGS.num_classes,)
 
-    pipeline_config_path = os.path.join(FLAGS.model_dir, 'pipeline.config')
+    FLAGS.pipeline_config_path = os.path.join(FLAGS.model_dir, 'pipeline.config')
     if FLAGS.checkpoint_dir:
         model_lib_v2.eval_continuously(
-            pipeline_config_path=pipeline_config_path,
+            pipeline_config_path=FLAGS.pipeline_config_path,
             model_dir=FLAGS.model_dir,
             train_steps=FLAGS.num_train_steps,
 
@@ -296,7 +301,7 @@ def main(unused_argv):
 
         with strategy.scope():
             model_lib_v2.train_loop(
-                pipeline_config_path=pipeline_config_path,
+                pipeline_config_path=FLAGS.pipeline_config_path,
                 model_dir=FLAGS.model_dir,
                 train_steps=FLAGS.num_train_steps,
                 use_tpu=FLAGS.use_tpu,
@@ -306,9 +311,10 @@ def main(unused_argv):
     #### 
     # Export models
     ####
+    tf.enable_v2_behavior()
     FLAGS.trained_checkpoint_dir=FLAGS.model_dir
     pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
-    with tf.io.gfile.GFile(pipeline_config_path, 'r') as f:
+    with tf2.io.gfile.GFile(FLAGS.pipeline_config_path, 'r') as f:
         text_format.Merge(f.read(), pipeline_config)
     text_format.Merge(FLAGS.config_override, pipeline_config)
     exporter_lib_v2.export_inference_graph(
