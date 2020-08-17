@@ -1,0 +1,321 @@
+# Lint as: python3
+# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+r"""Creates and runs TF2 object detection models.
+
+For local training/evaluation run:
+PIPELINE_CONFIG_PATH=path/to/pipeline.config
+MODEL_DIR=/tmp/model_outputs
+NUM_TRAIN_STEPS=10000
+SAMPLE_1_OF_N_EVAL_EXAMPLES=1
+python model_main_tf2.py -- \
+  --model_dir=$MODEL_DIR --num_train_steps=$NUM_TRAIN_STEPS \
+  --sample_1_of_n_eval_examples=$SAMPLE_1_OF_N_EVAL_EXAMPLES \
+  --pipeline_config_path=$PIPELINE_CONFIG_PATH \
+  --alsologtostderr
+"""
+import os
+from absl import flags
+import logging
+import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf2
+from object_detection import model_lib_v2
+from google.protobuf import text_format
+from object_detection import exporter_lib_v2
+from object_detection.protos import pipeline_pb2
+
+
+from dataset_tools.create_coco_tf_record_ import _create_tf_record_from_coco_annotations
+from dataset_tools.build_config import update_configs
+
+logger = tf.get_logger()
+logger.setLevel(logging.INFO)
+
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+
+## model
+#######################
+# DATASETS DEFINE #
+#######################
+flags.DEFINE_boolean(
+    'include_masks', False, 'Whether to include instance segmentations masks '
+                            '(PNG encoded) in the result. default: False.')
+flags.DEFINE_string('train_keypoint_annotations_file', '',
+                       'Training annotations JSON file.')
+flags.DEFINE_string('val_keypoint_annotations_file', '',
+                       'Validation annotations JSON file.')
+# DensePose is only available for coco 2014.
+flags.DEFINE_string('train_densepose_annotations_file', '',
+                       'Training annotations JSON file for DensePose.')
+flags.DEFINE_string('val_densepose_annotations_file', '',
+                       'Validation annotations JSON file for DensePose.')
+# Whether to only produce images/annotations on person class (for keypoint /
+# densepose task).
+flags.DEFINE_boolean('remove_non_person_annotations', False, 'Whether to '
+                                                                'remove all annotations for non-person objects.')
+flags.DEFINE_boolean('remove_non_person_images', False, 'Whether to '
+                                                           'remove all examples that do not contain a person.')
+flags.DEFINE_string('train_input_path', None, 'train_input_path')
+flags.DEFINE_string('eval_input_path', None, 'eval_input_path')
+
+## model
+#######################
+# MODEL DEFINE #
+#######################
+flags.DEFINE_string('input_type', 'image_tensor', 'Type of input node. Can be '
+                    'one of [`image_tensor`, `encoded_image_string_tensor`, '
+                    '`tf_example`, `float_image_tensor`]')
+flags.DEFINE_string('data_path', None, 'The directory where the original image dataset files are stored.')
+flags.DEFINE_string(
+    'output_path', None, 'Directory where checkpoints and event logs are written to.')
+flags.DEFINE_string(
+    'dataset_name', 'coco', 'The name of the dataset to load.')
+flags.DEFINE_integer(
+    'batch_size', 2, 'The number of samples in each batch.')
+flags.DEFINE_integer("num_classes", 90, "Number of training classes.")
+flags.DEFINE_string('fine_tune_checkpoint', 'datasets/work_dirs/checkpoints/efficientnet_b0/ckpt-0',
+                    'The path to a checkpoint from which to fine-tune.')
+flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
+flags.DEFINE_string('label_map_path', 'data/mscoco_label_map.pbtxt', 'Path to label map file.')
+flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config file.')
+flags.DEFINE_integer('num_train_steps', 1000, 'Number of train steps.')
+flags.DEFINE_bool('eval_on_train_data', False, 'Enable evaluating on train '
+                                               'data (only supported in distributed training).')
+flags.DEFINE_integer('sample_1_of_n_eval_examples', None, 'Will sample one of '
+                                                          'every n eval input examples, where n is provided.')
+flags.DEFINE_integer('sample_1_of_n_eval_on_train_examples', 5, 'Will sample '
+                                                                'one of every n train input examples for evaluation, '
+                                                                'where n is provided. This is only used if '
+                                                                '`eval_training_data` is True.')
+flags.DEFINE_string(
+    'model_dir', None, 'Path to output model directory '
+                       'where event and checkpoint files will be written.')
+flags.DEFINE_string(
+    'checkpoint_dir', None, 'Path to directory holding a checkpoint.  If '
+                            '`checkpoint_dir` is provided, this binary operates in eval-only mode, '
+                            'writing resulting metrics to `model_dir`.')
+
+flags.DEFINE_integer('eval_timeout', 120, 'Number of seconds to wait for an'
+                                          'evaluation checkpoint before exiting.')
+
+flags.DEFINE_bool('use_tpu', False, 'Whether the job is executing on a TPU.')
+flags.DEFINE_string(
+    'tpu_name',
+    default=None,
+    help='Name of the Cloud TPU for Cluster Resolvers.')
+flags.DEFINE_integer(
+    'num_workers', 1, 'When num_workers > 1, training uses '
+                      'MultiWorkerMirroredStrategy. When num_workers = 1 it uses '
+                      'MirroredStrategy.')
+flags.DEFINE_integer(
+    'checkpoint_every_n', 100, 'Integer defining how often we checkpoint.')
+flags.DEFINE_boolean('record_summaries', True,
+                     ('Whether or not to record summaries during'
+                      ' training.'))
+flags.DEFINE_string('config_override', '',
+                    'pipeline_pb2.TrainEvalPipelineConfig '
+                    'text proto to override pipeline_config_path.')
+flags.DEFINE_boolean('use_side_inputs', False,
+                     'If True, uses side inputs as well as image inputs.')
+flags.DEFINE_string('side_input_shapes', '',
+                    'If use_side_inputs is True, this explicitly sets '
+                    'the shape of the side input tensors to a fixed size. The '
+                    'dimensions are to be provided as a comma-separated list '
+                    'of integers. A value of -1 can be used for unknown '
+                    'dimensions. A `/` denotes a break, starting the shape of '
+                    'the next side input tensor. This flag is required if '
+                    'using side inputs.')
+flags.DEFINE_string('side_input_types', '',
+                    'If use_side_inputs is True, this explicitly sets '
+                    'the type of the side input tensors. The '
+                    'dimensions are to be provided as a comma-separated list '
+                    'of types, each of `string`, `integer`, or `float`. '
+                    'This flag is required if using side inputs.')
+flags.DEFINE_string('side_input_names', '',
+                    'If use_side_inputs is True, this explicitly sets '
+                    'the names of the side input tensors required by the model '
+                    'assuming the names will be a comma-separated list of '
+                    'strings. This flag is required if using side inputs.')
+
+def create_label_map(train_annotations_file):
+    import json
+    data = json.load(open(train_annotations_file, 'r'))
+    categories = data['categories']
+    FLAGS.num_classes=len(categories)
+    FLAGS.label_map_path = os.path.join(FLAGS.output_path, "label.pbtxt")
+    with open(FLAGS.label_map_path, "w" )as f:
+        for categorie in categories:
+            f.write('item{\n' + 'name:"' + categorie['name'] + '"\nid:' + str(categorie['id'] ) + '\ndisplay_name:"' +categorie['name'] + '"\n}')
+
+
+def creat_tf_record():
+    if FLAGS.dataset_name == 'coco':
+        create_coco_tf_record()
+    else:
+        create_custom_tf_record()
+
+def create_custom_tf_record():
+    assert os.path.exists(FLAGS.data_path), 'dataset path do not exits.'
+
+    if not tf.gfile.IsDirectory(FLAGS.output_path):
+        tf.gfile.MakeDirs(FLAGS.output_path)
+
+    train_output_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_train.record')
+    val_output_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_val.record')
+
+    train_annotations_file = os.path.join(FLAGS.data_path , "format_coco/annotations/instance.json")
+    train_image_dir = os.path.join(FLAGS.data_path , "format_coco/images")
+
+    val_annotations_file = os.path.join(FLAGS.data_path , "format_coco/annotations/instance.json")
+    val_image_dir = os.path.join(FLAGS.data_path , "format_coco/images")
+
+    _create_tf_record_from_coco_annotations(
+        train_annotations_file,
+        train_image_dir,
+        train_output_path,
+        FLAGS.include_masks,
+        num_shards=1,
+        keypoint_annotations_file=FLAGS.train_keypoint_annotations_file,
+        densepose_annotations_file=FLAGS.train_densepose_annotations_file,
+        remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+        remove_non_person_images=FLAGS.remove_non_person_images)
+
+    _create_tf_record_from_coco_annotations(
+        val_annotations_file,
+        val_image_dir,
+        val_output_path,
+        FLAGS.include_masks,
+        num_shards=1,
+        keypoint_annotations_file=FLAGS.val_keypoint_annotations_file,
+        densepose_annotations_file=FLAGS.val_densepose_annotations_file,
+        remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+        remove_non_person_images=FLAGS.remove_non_person_images)
+
+    FLAGS.train_input_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_train.record-?????-of-00001')
+    FLAGS.eval_input_path = os.path.join(FLAGS.output_path, FLAGS.dataset_name + '_val.record-?????-of-00001')
+    create_label_map(train_annotations_file)
+
+
+def create_coco_tf_record():
+    assert FLAGS.train_image_dir, '`train_image_dir` missing.'
+    assert FLAGS.val_image_dir, '`val_image_dir` missing.'
+    assert FLAGS.test_image_dir, '`test_image_dir` missing.'
+    assert FLAGS.train_annotations_file, '`train_annotations_file` missing.'
+    assert FLAGS.val_annotations_file, '`val_annotations_file` missing.'
+    assert FLAGS.testdev_annotations_file, '`testdev_annotations_file` missing.'
+
+    if not tf.gfile.IsDirectory(FLAGS.output_path):
+        tf.gfile.MakeDirs(FLAGS.output_path)
+    train_output_path = os.path.join(FLAGS.output_path, 'coco_train.record')
+    val_output_path = os.path.join(FLAGS.output_path, 'coco_val.record')
+    testdev_output_path = os.path.join(FLAGS.output_path, 'coco_testdev.record')
+
+    _create_tf_record_from_coco_annotations(
+        FLAGS.train_annotations_file,
+        FLAGS.train_image_dir,
+        train_output_path,
+        FLAGS.include_masks,
+        num_shards=100,
+        keypoint_annotations_file=FLAGS.train_keypoint_annotations_file,
+        densepose_annotations_file=FLAGS.train_densepose_annotations_file,
+        remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+        remove_non_person_images=FLAGS.remove_non_person_images)
+    _create_tf_record_from_coco_annotations(
+        FLAGS.val_annotations_file,
+        FLAGS.val_image_dir,
+        val_output_path,
+        FLAGS.include_masks,
+        num_shards=50,
+        keypoint_annotations_file=FLAGS.val_keypoint_annotations_file,
+        densepose_annotations_file=FLAGS.val_densepose_annotations_file,
+        remove_non_person_annotations=FLAGS.remove_non_person_annotations,
+        remove_non_person_images=FLAGS.remove_non_person_images)
+    _create_tf_record_from_coco_annotations(
+        FLAGS.testdev_annotations_file,
+        FLAGS.test_image_dir,
+        testdev_output_path,
+        FLAGS.include_masks,
+        num_shards=50)
+
+FLAGS = flags.FLAGS
+
+def main(unused_argv):
+    flags.mark_flag_as_required('model_dir')
+    flags.mark_flag_as_required('pipeline_config_path')
+    tf2.config.set_soft_device_placement(True)
+    creat_tf_record()
+    update_configs(pipeline_config_path=FLAGS.pipeline_config_path,
+                   model_dir=FLAGS.model_dir,
+                   train_steps=FLAGS.num_train_steps,
+                   batch_size=FLAGS.batch_size,
+                   learning_rate=FLAGS.learning_rate,
+                   fine_tune_checkpoint=FLAGS.fine_tune_checkpoint,
+                   label_map_path=FLAGS.label_map_path,
+                   train_input_path=FLAGS.train_input_path,
+                   eval_input_path=FLAGS.eval_input_path,
+                   num_classes=FLAGS.num_classes,)
+
+    pipeline_config_path = os.path.join(FLAGS.model_dir, 'pipeline.config')
+    if FLAGS.checkpoint_dir:
+        model_lib_v2.eval_continuously(
+            pipeline_config_path=pipeline_config_path,
+            model_dir=FLAGS.model_dir,
+            train_steps=FLAGS.num_train_steps,
+
+            sample_1_of_n_eval_examples=FLAGS.sample_1_of_n_eval_examples,
+            sample_1_of_n_eval_on_train_examples=(
+                FLAGS.sample_1_of_n_eval_on_train_examples),
+            checkpoint_dir=FLAGS.checkpoint_dir,
+            wait_interval=60, timeout=FLAGS.eval_timeout)
+    else:
+        if FLAGS.use_tpu:
+            # TPU is automatically inferred if tpu_name is None and
+            # we are running under cloud ai-platf2orm.
+            resolver = tf2.distribute.cluster_resolver.TPUClusterResolver(
+                FLAGS.tpu_name)
+            tf2.config.experimental_connect_to_cluster(resolver)
+            tf2.tpu.experimental.initialize_tpu_system(resolver)
+            strategy = tf2.distribute.experimental.TPUStrategy(resolver)
+        elif FLAGS.num_workers > 1:
+            strategy = tf2.distribute.experimental.MultiWorkerMirroredStrategy()
+        else:
+            strategy = tf2.compat.v2.distribute.MirroredStrategy()
+
+        with strategy.scope():
+            model_lib_v2.train_loop(
+                pipeline_config_path=pipeline_config_path,
+                model_dir=FLAGS.model_dir,
+                train_steps=FLAGS.num_train_steps,
+                use_tpu=FLAGS.use_tpu,
+                checkpoint_every_n=FLAGS.checkpoint_every_n,
+                record_summaries=FLAGS.record_summaries)
+
+    #### 
+    # Export models
+    ####
+    FLAGS.trained_checkpoint_dir=FLAGS.model_dir
+    pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+    with tf.io.gfile.GFile(pipeline_config_path, 'r') as f:
+        text_format.Merge(f.read(), pipeline_config)
+    text_format.Merge(FLAGS.config_override, pipeline_config)
+    exporter_lib_v2.export_inference_graph(
+        FLAGS.input_type, pipeline_config, FLAGS.trained_checkpoint_dir,
+        FLAGS.output_directory, FLAGS.use_side_inputs, FLAGS.side_input_shapes,
+        FLAGS.side_input_types, FLAGS.side_input_names)
+
+
+if __name__ == '__main__':
+    tf2.compat.v1.app.run()

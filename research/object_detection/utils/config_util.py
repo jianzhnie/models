@@ -580,6 +580,7 @@ def _maybe_update_config_with_key_value(configs, key, value):
   """
   is_valid_input_config_key, key_name, input_name, field_name = (
       check_and_parse_input_config_key(configs, key))
+  is_valid_input_config_key = True
   if is_valid_input_config_key:
     update_input_reader_config(
         configs,

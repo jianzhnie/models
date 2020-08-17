@@ -165,7 +165,7 @@ def create_custom_tf_record(FLAGS):
         densepose_annotations_file=FLAGS.val_densepose_annotations_file,
         remove_non_person_annotations=FLAGS.remove_non_person_annotations,
         remove_non_person_images=FLAGS.remove_non_person_images)
-    
+
 def create_coco_tf_record():
   assert FLAGS.train_image_dir, '`train_image_dir` missing.'
   assert FLAGS.val_image_dir, '`val_image_dir` missing.'
@@ -210,7 +210,6 @@ def create_coco_tf_record():
 
 
 def main(unused_argv):
-  flags.mark_flag_as_required('model_dir')
   flags.mark_flag_as_required('pipeline_config_path')
   tf2.config.set_soft_device_placement(True)
   update_configs(pipeline_config_path=FLAGS.pipeline_config_path,
