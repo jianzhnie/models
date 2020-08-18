@@ -87,11 +87,10 @@ flags.DEFINE_string(
 flags.DEFINE_integer(
     'batch_size', 2, 'The number of samples in each batch.')
 flags.DEFINE_integer("num_classes", 90, "Number of training classes.")
-flags.DEFINE_string('fine_tune_checkpoint', 'datasets/work_dirs/checkpoints/efficientnet_b0/ckpt-0',
+flags.DEFINE_string('fine_tune_checkpoint', '/data/premodel/code/object_detection/data/ssd_efficientdet_d0/ckpt-0',
                     'The path to a checkpoint from which to fine-tune.')
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_string('label_map_path', 'data/mscoco_label_map.pbtxt', 'Path to label map file.')
-
 flags.DEFINE_string('pipeline_config_path',
                     '/data/premodel/code/object_detection/configs/tf2/ssd_efficientdet_d0_512x512_coco17_gpu.config',
                     'Path to pipeline config file.')
@@ -272,10 +271,13 @@ def create_coco_tf_record():
 
 def remove_prev_models():
     # 刪除之前的checkponit文件夹
-    if os.path.exists(FLAGS.output_path):
-        shutil.rmtree(FLAGS.output_path)
-        os.makedirs(FLAGS.output_path)
-
+    if os.path.isdir(FLAGS.output_path):
+        files = os.listdir(FLAGS.output_path)
+        for f in files:
+            if "ckpt" in f or 'check' in f :
+                path = os.path.join(FLAGS.output_path, f)
+                if not os.path.isdir(path):
+                    os.remove(os.path.join(FLAGS.output_path, f))
 
 def export_model():
     pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
@@ -290,12 +292,15 @@ def export_model():
 
 
 def main(unused_argv):
-    remove_prev_models()
     flags.mark_flag_as_required('data_path')
     flags.mark_flag_as_required('output_path')
     flags.mark_flag_as_required('dataset_name')
     tf2.config.set_soft_device_placement(True)
+    print("<<<<<<<<<<<<<\nSTART REMOVE BEFORE WORKDIRS\n<<<<<<<<<<<<<")
+    remove_prev_models()
+    print("<<<<<<<<<<<<<\nSTART CREATE TFRECORD \n<<<<<<<<<<<<<")
     creat_tf_record()
+    print("<<<<<<<<<<<<<\nSTART UPDATE CONFIG \n<<<<<<<<<<<<<")
     update_configs(pipeline_config_path=FLAGS.pipeline_config_path,
                    model_dir=FLAGS.output_path,
                    train_steps=FLAGS.num_train_steps,
@@ -306,10 +311,11 @@ def main(unused_argv):
                    train_input_path=FLAGS.train_input_path,
                    eval_input_path=FLAGS.eval_input_path,
                    num_classes=FLAGS.num_classes,)
-
     FLAGS.pipeline_config_path = os.path.join(FLAGS.output_path, 'pipeline.config')
 
     if FLAGS.checkpoint_dir:
+        print("<<<<<<<<<<<<<\nSTART EVALUATION  \n<<<<<<<<<<<<<")
+
         model_lib_v2.eval_continuously(
             pipeline_config_path=FLAGS.pipeline_config_path,
             model_dir=FLAGS.output_path,
@@ -347,8 +353,8 @@ def main(unused_argv):
     #######################
     # Export models #
     #######################
+    print("<<<<<<<<<<<<<\nEXPORT MODEL  \n<<<<<<<<<<<<<")
     export_model()
-
 
     ####
     # Export models
