@@ -104,11 +104,11 @@ flags.DEFINE_integer('sample_1_of_n_eval_on_train_examples', 5, 'Will sample '
                                                                 'where n is provided. This is only used if '
                                                                 '`eval_training_data` is True.')
 flags.DEFINE_string(
-    'checkpoint_dir', None, 'Path to directory holding a checkpoint.  If '
-                            '`checkpoint_dir` is provided, this binary operates in eval-only mode, '
+    'checkpoint_path', None, 'Path to directory holding a checkpoint.  If '
+                            '`checkpoint_path` is provided, this binary operates in eval-only mode, '
                             'writing resulting metrics to `model_dir`.')
 
-flags.DEFINE_integer('eval_timeout', 120, 'Number of seconds to wait for an'
+flags.DEFINE_integer('eval_timeout', 60, 'Number of seconds to wait for an'
                                           'evaluation checkpoint before exiting.')
 
 flags.DEFINE_bool('use_tpu', False, 'Whether the job is executing on a TPU.')
@@ -179,6 +179,7 @@ def create_custom_tf_record():
     val_output_path = os.path.join(FLAGS.output_path, 'tf_record', FLAGS.dataset_name + '_val.record')
 
     train_annotations_file = os.path.join(FLAGS.data_path, "format_coco/annotations/instance.json")
+
     train_image_dir = os.path.join(FLAGS.data_path, "format_coco/images")
 
     val_annotations_file = os.path.join(FLAGS.data_path, "format_coco/annotations/instance.json")
@@ -270,14 +271,15 @@ def create_coco_tf_record():
 
 
 def remove_prev_models():
-    # 刪除之前的checkponit文件夹
-    if os.path.isdir(FLAGS.output_path):
-        files = os.listdir(FLAGS.output_path)
-        for f in files:
-            if "ckpt" in f or 'check' in f :
-                path = os.path.join(FLAGS.output_path, f)
-                if not os.path.isdir(path):
-                    os.remove(os.path.join(FLAGS.output_path, f))
+    if not FLAGS.checkpoint_path:
+        # 刪除之前的checkponit文件夹
+        if os.path.isdir(FLAGS.output_path):
+            files = os.listdir(FLAGS.output_path)
+            for f in files:
+                if "ckpt" in f or 'check' in f :
+                    path = os.path.join(FLAGS.output_path, f)
+                    if not os.path.isdir(path):
+                        os.remove(os.path.join(FLAGS.output_path, f))
 
 def export_model():
     pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
@@ -313,9 +315,8 @@ def main(unused_argv):
                    num_classes=FLAGS.num_classes,)
     FLAGS.pipeline_config_path = os.path.join(FLAGS.output_path, 'pipeline.config')
 
-    if FLAGS.checkpoint_dir:
+    if FLAGS.checkpoint_path:
         print("<<<<<<<<<<<<<\nSTART EVALUATION  \n<<<<<<<<<<<<<")
-
         model_lib_v2.eval_continuously(
             pipeline_config_path=FLAGS.pipeline_config_path,
             model_dir=FLAGS.output_path,
@@ -324,8 +325,8 @@ def main(unused_argv):
             sample_1_of_n_eval_examples=FLAGS.sample_1_of_n_eval_examples,
             sample_1_of_n_eval_on_train_examples=(
                 FLAGS.sample_1_of_n_eval_on_train_examples),
-            checkpoint_dir=FLAGS.checkpoint_dir,
-            wait_interval=60, timeout=FLAGS.eval_timeout)
+            checkpoint_dir=FLAGS.checkpoint_path,
+            wait_interval=30, timeout=FLAGS.eval_timeout)
     else:
         if FLAGS.use_tpu:
             # TPU is automatically inferred if tpu_name is None and
@@ -348,25 +349,18 @@ def main(unused_argv):
                 use_tpu=FLAGS.use_tpu,
                 checkpoint_every_n=FLAGS.checkpoint_every_n,
                 record_summaries=FLAGS.record_summaries)
-    
+        #######################
+        # Export models #
+        #######################
+        print("<<<<<<<<<<<<<\nEXPORT MODEL  \n<<<<<<<<<<<<<")
+        print(
+            f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path}  --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')} --side_input_shapes={FLAGS.side_input_shapes}   --side_input_shapes={FLAGS.side_input_types} --side_input_names={FLAGS.side_input_names}  --use_side_inputs={FLAGS.use_side_inputs}")
+        os.system(
+            f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path}  --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')} --side_input_shapes={FLAGS.side_input_shapes}   --side_input_shapes={FLAGS.side_input_types} --side_input_names={FLAGS.side_input_names}  --use_side_inputs={FLAGS.use_side_inputs}")
 
-    #######################
-    # Export models #
-    #######################
-    print("<<<<<<<<<<<<<\nEXPORT MODEL  \n<<<<<<<<<<<<<")
-    export_model()
 
-    ####
-    # Export models
-    ####
-
-    # print(
-    #     f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path} --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')}")
-    # os.system(
-    #     f"python /data/premodel/code/object_detection/exporter_main_v2.py --input_type=image_tensor  --pipeline_config_path={FLAGS.pipeline_config_path} --trained_checkpoint_dir={FLAGS.output_path} --output_directory={os.path.join(FLAGS.output_path, 'export')}")
 
 
 
 if __name__ == '__main__':
-    # TODO
     tf2.compat.v1.app.run()
