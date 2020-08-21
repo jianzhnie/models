@@ -107,7 +107,7 @@ tf.app.flags.DEFINE_integer(
     'num_frames', None,
     'The number of frames to use. Only used if is_video_model is True.')
 
-tf.app.flags.DEFINE_bool('write_text_graphdef', False,
+tf.app.flags.DEFINE_bool('write_text_graphdef', True,
                          'Whether to write a text version of graphdef.')
 
 tf.app.flags.DEFINE_bool('use_grayscale', False,
