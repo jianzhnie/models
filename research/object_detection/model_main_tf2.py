@@ -317,6 +317,7 @@ def main(unused_argv):
 
     if FLAGS.checkpoint_path:
         print("<<<<<<<<<<<<<\nSTART EVALUATION  \n<<<<<<<<<<<<<")
+        print("mAP@0.5IOU: -")
         model_lib_v2.eval_continuously(
             pipeline_config_path=FLAGS.pipeline_config_path,
             model_dir=FLAGS.output_path,
