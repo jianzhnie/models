@@ -34,4 +34,15 @@ python export_model_graph.py \
   --dataset_dir=data/dog-vs-cat \
   --model_name=resnet_v1_50 \
   --ckpt_file=data/work_dirs/dog-vs-cat-models/resnet_v1_50_from_scrach/model.ckpt-1000 \
-  --output_dir=data/work_dirs/dog-vs-cat-models/resnet_v1_50_from_scrach
+  --output_dir=data/work_dirs/dog-vs-cat-models/resnet_v1_50_from_scrach 
+
+
+## custom export 
+python export_cls_model_inference_graph.py \
+  --alsologtostderr \
+  --dataset_name  flowers \
+  --dataset_dir=data/flowers \
+  --input_type=image_tensor \
+  --model_name=inception_v3 \
+  --trained_checkpoint_prefix=data/work_dirs/flowers-models/inception_v3/model.ckpt-1000 \
+  --output_directory=data/work_dirs/flowers-models/inception_v3

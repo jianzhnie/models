@@ -93,6 +93,7 @@ def main(_):
 
     exporter.export_inference_graph(FLAGS.input_type,
                                     network_fn,
+                                    FLAGS.model_name,
                                     FLAGS.trained_checkpoint_prefix,
                                     FLAGS.output_directory,
                                     input_shape)
