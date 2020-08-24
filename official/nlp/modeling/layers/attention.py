@@ -15,21 +15,12 @@
 # ==============================================================================
 """Keras-based attention layer."""
 # pylint: disable=g-classes-have-attributes
-from __future__ import absolute_import
-from __future__ import division
-# from __future__ import google_type_annotations
-from __future__ import print_function
-
 import math
-import string
 
 import tensorflow as tf
 
 
 EinsumDense = tf.keras.layers.experimental.EinsumDense
-_CHR_IDX = string.ascii_lowercase
-
-
 MultiHeadAttention = tf.keras.layers.MultiHeadAttention
 
 
