@@ -298,11 +298,8 @@ def main(unused_argv):
     flags.mark_flag_as_required('output_path')
     flags.mark_flag_as_required('dataset_name')
     tf2.config.set_soft_device_placement(True)
-    print("<<<<<<<<<<<<<\nSTART REMOVE BEFORE WORKDIRS\n<<<<<<<<<<<<<")
     remove_prev_models()
-    print("<<<<<<<<<<<<<\nSTART CREATE TFRECORD \n<<<<<<<<<<<<<")
     creat_tf_record()
-    print("<<<<<<<<<<<<<\nSTART UPDATE CONFIG \n<<<<<<<<<<<<<")
     update_configs(pipeline_config_path=FLAGS.pipeline_config_path,
                    model_dir=FLAGS.output_path,
                    train_steps=FLAGS.num_train_steps,
@@ -317,7 +314,6 @@ def main(unused_argv):
 
     if FLAGS.checkpoint_path:
         print("<<<<<<<<<<<<<\nSTART EVALUATION  \n<<<<<<<<<<<<<")
-        print("mAP@0.5IOU: -")
         model_lib_v2.eval_continuously(
             pipeline_config_path=FLAGS.pipeline_config_path,
             model_dir=FLAGS.output_path,
@@ -328,6 +324,8 @@ def main(unused_argv):
                 FLAGS.sample_1_of_n_eval_on_train_examples),
             checkpoint_dir=FLAGS.checkpoint_path,
             wait_interval=30, timeout=FLAGS.eval_timeout)
+        # print("mAP@0.5IOU: -")
+
     else:
         if FLAGS.use_tpu:
             # TPU is automatically inferred if tpu_name is None and
@@ -341,7 +339,7 @@ def main(unused_argv):
             strategy = tf2.distribute.experimental.MultiWorkerMirroredStrategy()
         else:
             strategy = tf2.compat.v2.distribute.MirroredStrategy()
-
+        print("<<<<<<<<<<<<<\nSTART TRAINING  \n<<<<<<<<<<<<<")
         with strategy.scope():
             model_lib_v2.train_loop(
                 pipeline_config_path=FLAGS.pipeline_config_path,
