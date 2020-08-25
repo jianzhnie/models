@@ -1,5 +1,7 @@
 # Tensorflow 将 ckpt 转成 pb 格式
-使用 tf.train.saver()保存模型时会产生多个文件，会把计算图的结构和图上参数取值分成了不同的文件存储。这种方法是在TensorFlow中是最常用的保存方式。例如：下面的代码运行后，会在save目录下保存了四个文件：
+
+使用 tf.train.saver()保存模型时会产生多个文件，会把计算图的结构和图上参数取值分成了不同的文件存储。这种方法是在TensorFlow中是最常用的保存方式。例如：下面的代码运行后，会在save目录下保存了四个文件:
+
 
 ```python
 
@@ -19,19 +21,24 @@ tensorflow 训练模型过程中保存的4个文件。
 checkpoint  model.ckpt.data-00000-of-00001  model.ckpt.index  model.ckpt.meta
 ```
 >其中，checkpoint 是检查点文件，文件保存了一个目录下所有的模型文件列表;
->model.ckpt.meta 文件保存了TensorFlow计算图的结构，可以理解为神经网络的网络结构，
+>model.ckpt.meta 是压缩后的protobuf格式文件，用来保存图结构
 >ckpt.data 保存模型中每个变量（weights, biases, placeholders, gradients, hyper-parameters etc）的取值
+>ckpt.index 保存了模型计算图k-v字典，k为序列化的tensor名，v为其在data文件的地址
 
-很多时候，我们需要将TensorFlow的模型导出为单个文件（同时包含模型结构的定义与权重），方便在其他地方使用（如在Android中部署网络）。利用tf.train.write_graph()默认情况下只导出了网络的定义（没有权重），而利用tf.train.Saver().save()导出的文件graph_def与权重是分离的，因此需要采用别的方法。 
+加载和使用这些保存的模型也很容易， 你可以在TensorFlow官方教程中找到很多相关的[教程](https://www.tensorflow.org/guide/saved_model)。
+
+很多时候，我们需要将TensorFlow的模型导出为单个文件（同时包含模型结构的定义与权重），方便推理和部署（如在Android中部署网络）。利用tf.train.write_graph()默认情况下只导出了网络的定义（没有权重），而利用tf.train.Saver().save()导出的文件graph_def与权重是分离的，因此需要采用别的方法。 
+
+其实， 还有另一种称为 pb 的模型格式，pb 指的是 `Protocol Buffers`，它是跨语言，跨平台的序列化协议，用于不同应用或进程之间的通信。 PB 广泛用于模型部署，例如快速推断工具TensorRT。尽管 pb 格式模型似乎很重要，但 tensorflow 官网缺少如何保存、加载和推断pb格式模型的系列教程。
 
 
 ##  Frozen Graph
 
-Frozen Graph 将 tensorflow 导出的模型的权重都 freeze 住，使得其都变为常量,并且模型参数和网络结构保存在同一个文件中。
+Frozen Graph 将 tensorflow 导出的模型的权重都 freeze 住，使得其都变为常量,并且模型参数和网络结构保存在同一个文件中。这里有两种方式来 `freeze` 计算图：
 
 ### 方法一： 将计算图和模型参数绑定
 
-TensoFlow为我们提供了convert_variables_to_constants()方法，该方法可以固化模型结构，将计算图中的变量取值以常量的形式保存，而且保存的模型可以移植到Android平台。将 ckpt 转换成 pb  格式的文件的过程可简述如下：
+第一种方法需要手动完成序列化: TensoFlow为我们提供了convert_variables_to_constants()方法，该方法可以固化模型结构，将计算图中的变量取值以常量的形式保存，而且保存的模型可以移植到Android平台。将 ckpt 转换成 pb  格式的文件的过程可简述如下：
 
 - 通过传入 ckpt 模型的路径得到模型的图和变量数据
 - 通过 import_meta_graph 导入模型中的图
@@ -81,6 +88,9 @@ freeze_graph(input_checkpoint,out_pb_path)
 
 ### 方法二: 使用 tensorflow 自带的 `freeze_graph` 方法
 
+第二种方法是使用 tensorflow 自带的 [freeze_graph](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/tools/freeze_graph.py#L288) 函数，是对第一种方法的更高水平的封装。
+
+
 ```python
 freeze_graph(input_graph=FLAGS.prototxt_file,
                         input_saver='',
@@ -94,10 +104,9 @@ freeze_graph(input_graph=FLAGS.prototxt_file,
                         initializer_nodes='',
                         variable_names_blacklist='')
 ```
-
 - **input_graph**：（必选）模型文件，可以是二进制的pb文件或meta文件，用input_binary来指定区分（见下面说明） 
 - input_saver：（可选）Saver解析器。保存模型和权限时，Saver也可以自身序列化保存，以便在加载时应用合适的版本。主要用于版本不兼容时使用。可以为空，为空时用当前版本的Saver。 
-- input_binary：（可选）配合input_graph用，为true时，input_graph为二进制，为false时，input_graph为文件。默认False 
+- input_binary：（可选）配合input_graph用，为true时，input_graph为二进制文件时，为false时，input_graph为可读文件。默认False 
 - **input_checkpoint**：（必选）模型参数数据文件。训练时，给Saver用于保存权重、偏置等变量值。这时用于模型恢复变量值。 
 - **output_node_names**：（必选）输出节点的名字，有多个时用逗号分开。用于指定输出节点，将没有在输出线上的其它节点剔除。 
 - restore_op_name：（可选）从模型恢复节点的名字。默认：save/restore_all 
@@ -149,4 +158,120 @@ freeze_graph.freeze_graph(input_graph=FLAGS.output_prototxt_file,
                         clear_devices=True,
                         initializer_nodes='',
                         variable_names_blacklist='')
+```
+
+## How to use the frozen model
+
+将计算图模型成功 freeze 之后， 下一步就是如何加载和使用保存的 pb 文件（模型是以ProtoBuf的形式保存）。
+
+- Import a graph_def ProtoBuf first
+- Load this graph_def into an actual Graph
+
+```python
+import tensorflow as tf
+
+def load_graph(frozen_graph_filename):
+    # We load the protobuf file from the disk and parse it to retrieve the 
+    # unserialized graph_def
+    with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    # Then, we import the graph_def into a new Graph and returns it 
+    with tf.Graph().as_default() as graph:
+        # The name var will prefix every op/nodes in your graph
+        # Since we load everything in a new graph, this is not needed
+        tf.import_graph_def(graph_def, name="prefix")
+    return graph
+```
+
+## Replace Input Node
+
+```python
+original_model_path="original_model.pb"
+original_input_name="input_node"
+new_input_name="input"
+new_input_shape=[1,224,224,3],
+output_graph_path="new_model.pb"
+# create a tf graph
+with tf.gfile.GFile(original_model_path, "rb") as f:
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
+
+# Find out input/output node names
+print(['name: '+ n.name + ', op: ' + n.op for n in graph_def.node])
+# replace original input node with new placeholder node
+new_input_node = tf.placeholder(tf.float32,
+                                shape=new_input_shape,
+                                name=new_input_name)
+
+# load graph def with input mapped to new node
+graph = tf.import_graph_def(graph_def,
+                            input_map={original_input_name: new_input_node},
+                            name='' # scope prefix added to each op)
+
+with tf.Session(graph=imported_graph) as sess:
+    input_graph_def = tf.get_default_graph().as_graph_def()
+    output_graph_def = graph_util.convert_variables_to_constants(sess, input_graph_def, output_node_names=['labels_softmax'])
+    tf.train.write_graph(output_graph_def, './', output_graph_path, False)
+```
+
+## Optimize the Graph
+
+在进行推理时， 原来保存的计算图里面有很多计算节点应该是不需要的，因此可以通过剪枝对模型进行优化，可以减少额外的计算优化性能。
+
+- Removing training-only operations like checkpoint saving.
+- Stripping out parts of the graph that are never reached.
+- Removing debug operations like CheckNumerics.
+- Folding batch normalization ops into the pre-calculated weights.
+- Fusing common operations into unified versions.
+
+
+This script takes either a frozen binary GraphDef file (where the weight variables have been converted into constants by the freeze_graph script), or a text GraphDef proto file (the weight variables are stored in a separate checkpoint file), and outputs a new GraphDef with the optimizations applied. If the input graph is a text graph file, make sure to include the node that restores the variable weights in output_names. That node is usually named "restore_all".
+
+
+```python
+
+# optimize graph definitions
+from tensorflow.tools.graph_transforms import TransformGraph
+ 
+def optimize_graph(original_graph_def,
+                   input_node_names=['placeholder'],
+                   output_node_names=['outputs'],
+                   remove_node_names=['Identity']):
+    remove_op_names = ','.join(['op=%s' % node for node in remove_node_names])
+    return TransformGraph(original_graph_def,
+                          inputs=input_node_names,
+                          outputs=output_node_names,
+                          transforms = ['remove_nodes(%s)' % remove_op_names,
+                                        'merge_duplicate_nodes', 
+                                        'strip_unused_nodes',
+                                        'fold_constants(ignore_errors=true)',
+                                        'fold_batch_norms',
+                                        'quantize_weights'])
+
+def export_from_frozen_graph(frozen_graph_filename,
+                             input_node_names=['placeholder'],
+                             output_node_names=['output'], 
+                             output_filename='frozen_graph.pb',
+                             optimize=True):
+    tf.reset_default_graph()
+    graph_def = tf.GraphDef()
+ 
+    with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+        graph_def.ParseFromString(f.read())
+        print("%d ops in original graph." % len(graph_def.node))
+ 
+        if optimize:
+            graph_def = optimize_graph(graph_def,
+                                     input_node_names,
+                                     output_node_names)
+            print("%d ops in optimized graph." % len(graph_def.node))
+ 
+         # Serialize and write to file
+        if output_filename:
+            with tf.gfile.GFile(output_filename, "wb") as f:
+                f.write(graph_def.SerializeToString())
+ 
+    return graph_def
 ```
