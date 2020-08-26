@@ -160,6 +160,10 @@ freeze_graph.freeze_graph(input_graph=FLAGS.output_prototxt_file,
                         variable_names_blacklist='')
 ```
 
+## ModelZoo
+
+华为官网提供了很多转换成功的模型[ModelZoo](https://www.huaweicloud.com/ascend/resources/modelzoo), 根据 model zoo 中提供的相关描述， 我们可以下载华为官网给出的tensorflow 开源代码， 然后结合上面  `freeze_graph` 的代码将 Modelzoo 中支持的模型转换成 om 模型。
+
 ## How to use the frozen model
 
 将计算图模型成功 freeze 之后， 下一步就是如何加载和使用保存的 pb 文件（模型是以ProtoBuf的形式保存）。
