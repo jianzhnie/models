@@ -186,6 +186,7 @@ def load_graph(frozen_graph_filename):
 ```
 
 ## Replace Input Node
+当我们使用 pb 文件进行推理时， 如果 graph 中的 输入节点和实际的节点名称不一致，也可以对输入节点进行修改。
 
 ```python
 original_model_path="original_model.pb"
