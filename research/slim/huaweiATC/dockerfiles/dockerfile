@@ -1,41 +1,7 @@
-FROM ubuntu:18.04
-RUN apt-get update &&  apt-get install -y gcc g++ make cmake zlib1g zlib1g-dev libsqlite3-dev openssl libssl-dev libffi-dev unzip pciutils net-tools
+FROM harbor.sigsus.cn:8443/sz_gongdianju/apulistech/atc:0.0.1-amd64
 
-# Install vim、 wget
-RUN apt-get install -y vim 
-RUN apt-get install -y wget
-
-# Install python3.7.5
-RUN wget https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz
-# For faster build time, modify the -j flag according to your processor. If you do not know the number of cores your processor, you can find it by typing nproc
-RUN tar -xf Python-3.7.5.tgz && cd Python-3.7.5 && ./configure --prefix=/usr/local/python3.7.5 --enable-shared && make  && make install
-RUN pip3.7.5 config set global.index-url https://mirrors.aliyun.com/pypi/simple
-
-# enviroment for ATC
-RUN ./configure --prefix=/usr/local/python3.7.5 --enable-shared
-RUN cp /usr/local/python3.7.5/lib/libpython3.7m.so.1.0 /usr/lib
-RUN ln -s /usr/local/python3.7.5/bin/python3 /usr/bin/python3.7
-RUN ln -s /usr/local/python3.7.5/bin/pip3 /usr/bin/pip3.7
-RUN ln -s /usr/local/python3.7.5/bin/python3 /usr/bin/python3.7.5
-RUN ln -s /usr/local/python3.7.5/bin/pip3 /usr/bin/pip3.7.5
-
-# Install py-tools
-RUN pip3.7.5 install --upgrade pip
-RUN pip3.7.5 install psutil
-    pip3.7.5 install decorator
-    pip3.7.5 install numpy==1.16.0
-    pip3.7.5 install protobuf==3.11.3
-    pip3.7.5 install scipy
-    pip3.7.5 install sympy
-    pip3.7.5 install cffi
-    pip3.7.5 install grpcio
-    pip3.7.5 install grpcio-tools
-    pip3.7.5 install requests
-    pip3.7.5 install attrs
-
-# # control log level. 0-DEBUG, 1-INFO, 2-WARNING, 3-ERROR, default level is WARNING.
-export PATH=/usr/local/python3.7.5/bin:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/ccec_compiler/bin:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/bin:$PATH
-export PYTHONPATH=/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/python/site-packages/te:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/python/site-packages/topi:$PYTHONPATH
-export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/lib64:$LD_LIBRARY_PATH
-export ASCEND_OPP_PATH=/usr/local/Ascend/ascend-toolkit/20.0.RC1/opp
+ENV PATH=/usr/local/python3.7.5/bin:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/ccec_compiler/bin:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/bin:$PATH
+ENV PYTHONPATH=/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/python/site-packages/te:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/python/site-packages/topi:$PYTHONPATH
+ENV LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/lib64:$LD_LIBRARY_PATH
+ENV ASCEND_OPP_PATH=/usr/local/Ascend/ascend-toolkit/20.0.RC1/opp
 

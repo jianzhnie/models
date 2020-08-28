@@ -14,7 +14,7 @@ atc --framework=3 --model=yolov3_coco.pb --output=yolov3 --soc_version=Ascend310
 |framework | DL Framework type(0:Caffe; 1:MindSpore; 3:Tensorflow)|
 | model    |         Model file   |
 |output    |       Output file path&name(needn't suffix, will add .om automatically).|
-|input_shape |       Shape of input data. Separate multiple nodes with semicolons (;).Use double quotation marks (") to enclose each argument.E.g.: "input_name1:n1,c1,h1,w1;input_name2:n2,c2,h2,w2"|
+|input_shape |       Shape of input data. Separate multiple nodes with semicolons. Use double quotation marks (") to enclose each argument.E.g.: "input_name1:n1,c1,h1,w1;input_name2:n2,c2,h2,w2"|
 |soc_version   |    The soc version. E.g.: "Ascend310"|
 
 其他参数细节可以参考[华为官方文档](https://support.huaweicloud.com/ti-atc-A200_3000/altasatc_16_003.html)
@@ -70,7 +70,7 @@ aipp_op {
     input_bias_0: 0
     input_bias_1: 128
     input_bias_2: 128
-    input_format: YUV400_U8
+    input_format: YUV420SP_U8
     csc_switch: true
     src_image_size_w: 224
     src_image_size_h: 224

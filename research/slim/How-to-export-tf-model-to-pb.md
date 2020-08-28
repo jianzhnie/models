@@ -20,9 +20,12 @@ tensorflow 训练模型过程中保存的4个文件。
 ```python
 checkpoint  model.ckpt.data-00000-of-00001  model.ckpt.index  model.ckpt.meta
 ```
->其中，checkpoint 是检查点文件，文件保存了一个目录下所有的模型文件列表;
+>其中，checkpoint 是检查点文件，保存了目录下所有的模型文件列表;
+>
 >model.ckpt.meta 是压缩后的protobuf格式文件，用来保存图结构
+>
 >ckpt.data 保存模型中每个变量（weights, biases, placeholders, gradients, hyper-parameters etc）的取值
+>
 >ckpt.index 保存了模型计算图k-v字典，k为序列化的tensor名，v为其在data文件的地址
 
 加载和使用这些保存的模型也很容易， 你可以在TensorFlow官方教程中找到很多相关的[教程](https://www.tensorflow.org/guide/saved_model)。
@@ -72,7 +75,9 @@ def freeze_graph(input_checkpoint,output_graph):
 ```
 
 >1、函数freeze_graph中，最重要的就是要确定“指定输出的节点名称”，这个节点名称必须是原模型中存在的节点，对于freeze操作，我们需要定义输出结点的名字。因为网络其实是比较复杂的，定义了输出结点的名字，那么freeze的时候就只把输出该结点所需要的子图都固化下来，其他无关的就舍弃掉。因为我们freeze模型的目的是接下来做预测。所以，output_node_names一般是网络模型最后一层输出的节点名称，或者说就是我们预测的目标。
->2、在保存的时候，通过convert_variables_to_constants函数来指定需要固化的节点名称，对于鄙人的代码，需要固化的节点只有一个：output_node_names。注意节点名称与张量的名称的区别，例如：“input:0”是张量的名称，而"input"表示的是节点的名称。
+>
+>2、在保存的时候，通过convert_variables_to_constants函数来指定需要固化的节点名称，需要固化的节点只有一个：output_node_names。注意节点名称与张量的名称的区别，例如：“input:0”是张量的名称，而"input"表示的是节点的名称。
+>
 >3、源码中通过graph = tf.get_default_graph()获得默认的图，这个图就是由saver = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=True)恢复的图，因此必须先执行tf.train.import_meta_graph，再执行tf.get_default_graph() 。
 
 调用方法很简单，输入ckpt模型路径，输出pb模型的路径即可：
