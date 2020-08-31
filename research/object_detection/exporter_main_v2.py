@@ -153,7 +153,7 @@ def main(_):
   try:
     # 寫入類別文件用於推理
     writeLabels(pipeline_config.train_input_reader.label_map_path)
-  except Excetion as e:
+  except Exception as e:
     print(e)
     print("label generate error")
   export_inference_graph(

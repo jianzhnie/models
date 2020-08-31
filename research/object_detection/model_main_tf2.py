@@ -360,7 +360,7 @@ def main(unused_argv):
         #######################
         # Export models #
         # EXAMPLE
-        # python /data/premodel/code/object_detection/exporter_main_v2.py  --input_type=image_tensor --pipeline_config_path=/home/admin/work_dirs/ssd_efficientdet_d0/pipeline.config --trained_checkpoint_dir=/home/admin/work_dirs/ssd_efficientdet_d0/ --output_directory=/home/admin/work_dirs/ssd_efficientdet_d0/export
+        # python /data/premodel/code/object_detection/exporter_main_v2.py  --input_type=image_tensor --pipeline_config_path=/home/admin/work_dirs/dogs_twow_out/pipeline.config --trained_checkpoint_dir=/home/admin/work_dirs/dogs_twow_out/ --output_directory=/home/admin/work_dirs/dogs_twow_out/export
         #######################
         print("<<<<<<<<<<<<<\nEXPORT MODEL  \n<<<<<<<<<<<<<")
         print(
