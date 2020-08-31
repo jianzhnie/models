@@ -99,7 +99,8 @@ import tensorflow.compat.v2 as tf
 from google.protobuf import text_format
 from exporter_lib_v2 import export_inference_graph
 from object_detection.protos import pipeline_pb2
-
+import os
+import json
 tf.enable_v2_behavior()
 
 
@@ -149,11 +150,28 @@ def main(_):
   with tf.io.gfile.GFile(FLAGS.pipeline_config_path, 'r') as f:
     text_format.Merge(f.read(), pipeline_config)
   text_format.Merge(FLAGS.config_override, pipeline_config)
+  try:
+    # 寫入類別文件用於推理
+    writeLabels(pipeline_config.train_input_reader.label_map_path)
+  except Excetion as e:
+    print(e)
+    print("label generate error")
   export_inference_graph(
       FLAGS.input_type, pipeline_config, FLAGS.trained_checkpoint_dir,
       FLAGS.output_directory, FLAGS.use_side_inputs, FLAGS.side_input_shapes,
       FLAGS.side_input_types, FLAGS.side_input_names)
-
-
+def writeLabels(pbtxt):
+  import json
+  with open(os.path.join(FLAGS.output_directory,'class_names.json'),'w') as f_w:
+    with open(os.path.join(pbtxt),'r')as f_r:
+      line=f_r.readlines()
+      data=[]
+      for index,value in enumerate(line):
+        if "id" in value:
+          id=int(value[3:].strip("\n").strip(""))
+          display_name=line[index+1][len('display_name:"'):-2]
+          data.append({"id":id,"display_name":display_name})
+    json.dump(data,f_w)
+    
 if __name__ == '__main__':
   app.run(main)
