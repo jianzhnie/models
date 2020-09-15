@@ -262,7 +262,7 @@ def create_retrieval_dataset(file_path,
       'input_ids': tf.io.FixedLenFeature([seq_length], tf.int64),
       'input_mask': tf.io.FixedLenFeature([seq_length], tf.int64),
       'segment_ids': tf.io.FixedLenFeature([seq_length], tf.int64),
-      'int_iden': tf.io.FixedLenFeature([1], tf.int64),
+      'example_id': tf.io.FixedLenFeature([1], tf.int64),
   }
   dataset = single_file_dataset(file_path, name_to_features)
 
@@ -278,12 +278,29 @@ def create_retrieval_dataset(file_path,
         'input_mask': record['input_mask'],
         'input_type_ids': record['segment_ids']
     }
-    y = record['int_iden']
+    y = record['example_id']
     return (x, y)
 
   dataset = dataset.map(
       _select_data_from_record,
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
   dataset = dataset.batch(batch_size, drop_remainder=False)
+
+  def _pad_to_batch(x, y):
+    cur_size = tf.shape(y)[0]
+    pad_size = batch_size - cur_size
+
+    pad_ids = tf.zeros(shape=[pad_size, seq_length], dtype=tf.int32)
+    for key in ('input_word_ids', 'input_mask', 'input_type_ids'):
+      x[key] = tf.concat([x[key], pad_ids], axis=0)
+
+    pad_labels = -tf.ones(shape=[pad_size, 1], dtype=tf.int32)
+    y = tf.concat([y, pad_labels], axis=0)
+    return x, y
+
+  dataset = dataset.map(
+      _pad_to_batch,
+      num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
   dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
   return dataset

@@ -18,9 +18,10 @@
 import json
 import os
 import pprint
-from typing import Any
+from typing import Any, List
 
 from absl import logging
+import dataclasses
 import orbit
 import tensorflow as tf
 
@@ -47,6 +48,16 @@ def create_trainer(
   return trainer
 
 
+@dataclasses.dataclass
+class ParseConfigOptions:
+  """Use this dataclass instead of FLAGS to customize parse_configuration()."""
+  experiment: str
+  config_file: List[str]
+  tpu: str = ''
+  tf_data_service: str = ''
+  params_override: str = ''
+
+
 def parse_configuration(flags_obj):
   """Parses ExperimentConfig from flags."""
 
@@ -60,10 +71,18 @@ def parse_configuration(flags_obj):
     params = hyperparams.override_params_dict(
         params, config_file, is_strict=True)
 
-  # 3. Override the TPU address.
+  # 3. Override the TPU address and tf.data service address.
   params.override({
       'runtime': {
           'tpu': flags_obj.tpu,
+      },
+      'task': {
+          'train_data': {
+              'tf_data_service_address': flags_obj.tf_data_service,
+          },
+          'validation_data': {
+              'tf_data_service_address': flags_obj.tf_data_service,
+          }
       }
   })
 

@@ -19,7 +19,6 @@ import math
 
 import tensorflow as tf
 
-
 EinsumDense = tf.keras.layers.experimental.EinsumDense
 MultiHeadAttention = tf.keras.layers.MultiHeadAttention
 
