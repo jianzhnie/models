@@ -12,9 +12,11 @@ import tempfile
 import tensorflow.compat.v1 as tf
 import tf_slim as slim
 from tensorflow.core.protobuf import saver_pb2
-from tensorflow.python.tools import freeze_graph  # pylint: disable=g-direct-tensorflow-import
+from tensorflow.python.tools import freeze_graph
 from tensorflow.python.platform import gfile
-from preprocessing import preprocessing_factory
+from tensorflow.python.saved_model import signature_constants
+from tensorflow.python.training import saver as saver_lib
+
 
 
 def replace_variable_values_with_moving_averages(graph,
@@ -185,18 +187,17 @@ def write_graph_and_checkpoint(inference_graph_def,
             saver.save(sess, model_path)
 
 
-def _get_outputs_from_inputs(input_tensors, model, model_name, eval_image_size,
+def _get_outputs_from_inputs(input_tensors, model, 
                              output_collection_name):
     inputs = tf.to_float(input_tensors)
-    image_preprocessing_fn = preprocessing_factory.get_preprocessing(
-        model_name, is_training=False)
-    preprocessed_inputs = image_preprocessing_fn(inputs, eval_image_size, eval_image_size)
-    output_tensors = model(preprocessed_inputs)
-    return _add_output_tensor_nodes(output_tensors,
+    preprocessed_inputs = model.preprocess(inputs)
+    output_tensors = model.predict(preprocessed_inputs)
+    postprocessed_tensors = model.postprocess(output_tensors)
+    return _add_output_tensor_nodes(postprocessed_tensors,
                                     output_collection_name)
-    
 
-def _build_model_graph(input_type, model, model_name, input_shape, 
+
+def _build_model_graph(input_type, model, input_shape, 
                            output_collection_name, graph_hook_fn):
     """Build the desired graph."""
     if input_type not in input_placeholder_fn_map:
@@ -212,8 +213,6 @@ def _build_model_graph(input_type, model, model_name, input_shape,
     outputs = _get_outputs_from_inputs(
         input_tensors=input_tensors,
         model=model,
-        model_name=model_name,
-        eval_image_size=input_shape[1],
         output_collection_name=output_collection_name)
     
     # Add global step to the graph
@@ -226,7 +225,6 @@ def _build_model_graph(input_type, model, model_name, input_shape,
 
 def export_inference_graph(input_type,
                            model,
-                           model_name,
                            trained_checkpoint_prefix,
                            output_directory,
                            input_shape=None,
@@ -261,7 +259,6 @@ def export_inference_graph(input_type,
     outputs, placeholder_tensor = _build_model_graph(
         input_type=input_type,
         model=model,
-        model_name=model_name,
         input_shape=input_shape,
         output_collection_name=output_collection_name,
         graph_hook_fn=graph_hook_fn)
