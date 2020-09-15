@@ -160,10 +160,19 @@ def create_label_map(train_annotations_file):
     categories = data['categories']
     FLAGS.num_classes = len(categories)
     FLAGS.label_map_path = os.path.join(FLAGS.output_path, "label.pbtxt")
+    
     with open(FLAGS.label_map_path, "w")as f:
         for categorie in categories:
             f.write('item{\n' + 'name:"' + categorie['name'] + '"\nid:' + str(categorie['id']) + '\ndisplay_name:"' +
                     categorie['name'] + '"\n}')
+    with open(os.path.join(FLAGS.output_path, "label.names"), "w") as f:
+        data=[]
+        for categorie in categories:
+            data.append({
+                "id":categorie['id'],
+                "display_name":categorie['name']
+            })
+        f.write(json.dumps(data))
 
 def creat_tf_record():
     if FLAGS.dataset_name == 'coco':
@@ -350,6 +359,8 @@ def main(unused_argv):
                 record_summaries=FLAGS.record_summaries)
         #######################
         # Export models #
+        # EXAMPLE
+        # python /data/premodel/code/object_detection/exporter_main_v2.py  --input_type=image_tensor --pipeline_config_path=/home/admin/work_dirs/dogs_twow_out/pipeline.config --trained_checkpoint_dir=/home/admin/work_dirs/dogs_twow_out/ --output_directory=/home/admin/work_dirs/dogs_twow_out/export
         #######################
         print("<<<<<<<<<<<<<\nEXPORT MODEL  \n<<<<<<<<<<<<<")
         print(
