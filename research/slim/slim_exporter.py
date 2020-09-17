@@ -18,6 +18,69 @@ from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.training import saver as saver_lib
 
 
+def model_preprocess(image,
+                     height,
+                     width,
+                     central_fraction=0.875,
+                     scope=None,
+                     central_crop=True,
+                     use_grayscale=False):
+    """Prepare one image for evaluation.
+
+    If height and width are specified it would output an image with that size by
+    applying resize_bilinear.
+
+    If central_fraction is specified it would crop the central fraction of the
+    input image.
+
+    Args:
+        image: 3-D Tensor of image. If dtype is tf.float32 then the range should be
+        [0, 1], otherwise it would converted to tf.float32 assuming that the range
+        is [0, MAX], where MAX is largest positive representable number for
+        int(8/16/32) data type (see `tf.image.convert_image_dtype` for details).
+        height: integer
+        width: integer
+        central_fraction: Optional Float, fraction of the image to crop.
+        scope: Optional scope for name_scope.
+        central_crop: Enable central cropping of images during preprocessing for
+        evaluation.
+        use_grayscale: Whether to convert the image from RGB to grayscale.
+    Returns:
+        3-D float Tensor of prepared image.
+    """
+    if image.dtype != tf.float32:
+        image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+    if use_grayscale:
+        image = tf.image.rgb_to_grayscale(image)
+    # Crop the central region of the image with an area containing 87.5% of
+    # the original image.
+    if central_crop and central_fraction:
+        image = tf.image.central_crop(image, central_fraction=central_fraction)
+
+    if height and width:
+        # Resize the image to the specified height and width.
+        image = tf.image.resize_bilinear(image, [height, width], align_corners=False)
+        image = tf.subtract(image, 0.5)
+        image = tf.multiply(image, 2.0)
+    return image
+
+
+def model_postprocess(model, images):
+    """Convert predicted output tensors to final forms.
+    Args:
+        prediction_dict: A dictionary holding prediction tensors.
+        **params: Additional keyword arguments for specific implementations
+            of specified models.     
+    Returns:
+        A dictionary containing the postprocessed results.
+    """
+    
+    logits, _ = model(images)
+    logits = tf.nn.softmax(logits)
+    classes = tf.argmax(logits, axis=1)
+    postprecessed_dict = {'logits': logits, 'classes': classes}
+    return postprecessed_dict
+
 
 def replace_variable_values_with_moving_averages(graph,
                                                  current_checkpoint_file,
@@ -81,7 +144,6 @@ input_placeholder_fn_map = {
     'image_tensor': _image_tensor_input_placeholder,
     'encoded_image_string_tensor':
         _encoded_image_string_tensor_input_placeholder,
-#    'tf_example': _tf_example_input_placeholder,
     }
 
 
@@ -105,7 +167,9 @@ def _add_output_tensor_nodes(postprocessed_tensors,
     """
     outputs = {}
     classes = postprocessed_tensors.get('classes') # Assume containing 'classes'
+    logits = postprocessed_tensors.get('logits')
     outputs['classes'] = tf.identity(classes, name='classes')
+    outputs['logits'] = tf.identity(logits, name='logits')
     for output_key in outputs:
         tf.add_to_collection(output_collection_name, outputs[output_key])
     return outputs
@@ -171,6 +235,45 @@ def write_saved_model(saved_model_path,
             builder.save()
 
 
+
+def _write_saved_model(saved_model_path,
+                       trained_checkpoint_prefix,
+                       inputs,
+                       outputs):
+    """Writes SavedModel to disk.
+    Args:
+        saved_model_path: Path to write SavedModel.
+        trained_checkpoint_prefix: path to trained_checkpoint_prefix.
+        inputs: The input image tensor to use for detection.
+        outputs: A tensor dictionary containing the outputs of a DetectionModel.
+    """
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        saver.restore(sess, trained_checkpoint_prefix)
+        builder = tf.saved_model.builder.SavedModelBuilder(saved_model_path)
+
+        tensor_info_inputs = {
+            'inputs': tf.saved_model.utils.build_tensor_info(inputs)}
+        tensor_info_outputs = {}
+        for k, v in outputs.items():
+            tensor_info_outputs[k] = tf.saved_model.utils.build_tensor_info(v)
+
+        detection_signature = (
+            tf.saved_model.signature_def_utils.build_signature_def(
+                inputs=tensor_info_inputs,
+                outputs=tensor_info_outputs,
+                method_name=signature_constants.PREDICT_METHOD_NAME))
+
+        builder.add_meta_graph_and_variables(
+            sess, [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                    detection_signature,
+            },
+        )
+        builder.save()
+
+
 def write_graph_and_checkpoint(inference_graph_def,
                                model_path,
                                input_saver_def,
@@ -187,17 +290,16 @@ def write_graph_and_checkpoint(inference_graph_def,
             saver.save(sess, model_path)
 
 
-def _get_outputs_from_inputs(input_tensors, model, 
+def _get_outputs_from_inputs(input_tensors, image_size, model, 
                              output_collection_name):
     inputs = tf.to_float(input_tensors)
-    preprocessed_inputs = model.preprocess(inputs)
-    output_tensors = model.predict(preprocessed_inputs)
-    postprocessed_tensors = model.postprocess(output_tensors)
+    preprocessed_inputs = model_preprocess(inputs, image_size, image_size)
+    postprocessed_tensors = model_postprocess(model, preprocessed_inputs)
     return _add_output_tensor_nodes(postprocessed_tensors,
                                     output_collection_name)
 
 
-def _build_model_graph(input_type, model, input_shape, 
+def _build_model_graph(input_type, image_size, model, input_shape, 
                            output_collection_name, graph_hook_fn):
     """Build the desired graph."""
     if input_type not in input_placeholder_fn_map:
@@ -212,6 +314,7 @@ def _build_model_graph(input_type, model, input_shape,
         **placeholder_args)
     outputs = _get_outputs_from_inputs(
         input_tensors=input_tensors,
+        image_size=image_size,
         model=model,
         output_collection_name=output_collection_name)
     
@@ -224,6 +327,7 @@ def _build_model_graph(input_type, model, input_shape,
 
 
 def export_inference_graph(input_type,
+                           image_size,
                            model,
                            trained_checkpoint_prefix,
                            output_directory,
@@ -258,6 +362,7 @@ def export_inference_graph(input_type,
     
     outputs, placeholder_tensor = _build_model_graph(
         input_type=input_type,
+        image_size=image_size,
         model=model,
         input_shape=input_shape,
         output_collection_name=output_collection_name,
@@ -300,9 +405,10 @@ def export_inference_graph(input_type,
         output_node_names=output_node_names,
         restore_op_name='save/restore_all',
         filename_tensor_name='save/Const:0',
+        output_graph=frozen_graph_path,
         clear_devices=True,
         initializer_nodes='')
     write_frozen_graph(frozen_graph_path, frozen_graph_def)
-    write_saved_model(saved_model_path, frozen_graph_def,
+    _write_saved_model(saved_model_path, trained_checkpoint_prefix,
                       placeholder_tensor, outputs)
 

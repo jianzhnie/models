@@ -41,7 +41,7 @@ from tensorflow.contrib import quantize as contrib_quantize
 from tensorflow.python.platform import gfile
 from datasets import dataset_factory
 from nets import nets_factory
-import exporter
+from slim_exporter import export_inference_graph
 
 
 tf.app.flags.DEFINE_string(
@@ -73,8 +73,12 @@ tf.flags.DEFINE_string('trained_checkpoint_prefix', None,
                     'path/to/model.ckpt')
 tf.flags.DEFINE_string('output_directory', None, 'Path to write outputs')
 
+tf.app.flags.mark_flag_as_required('model_name')
+tf.app.flags.mark_flag_as_required('trained_checkpoint_prefix')
+tf.app.flags.mark_flag_as_required('output_directory')
 
 FLAGS = tf.app.flags.FLAGS
+
 
 def main(_):
     tf.app.flags.mark_flag_as_required('trained_checkpoint_prefix')
@@ -87,17 +91,21 @@ def main(_):
             FLAGS.model_name,
             num_classes=(dataset.num_classes - FLAGS.labels_offset),
             is_training=FLAGS.is_training)
+    
     image_size = FLAGS.image_size or network_fn.default_image_size
 
     input_shape = [FLAGS.batch_size, image_size, image_size, 3]
 
-    exporter.export_inference_graph(FLAGS.input_type,
-                                    network_fn,
-                                    FLAGS.model_name,
-                                    FLAGS.trained_checkpoint_prefix,
-                                    FLAGS.output_directory,
-                                    input_shape)
-    
+    export_inference_graph(FLAGS.input_type,
+                           image_size,
+                           network_fn,
+                           FLAGS.trained_checkpoint_prefix,
+                           FLAGS.output_directory,
+                           input_shape)
+
+
+
+
 if __name__ == '__main__':
     tf.app.run()
 
