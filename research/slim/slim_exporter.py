@@ -23,7 +23,7 @@ def model_preprocess(image,
                      width,
                      central_fraction=0.875,
                      scope=None,
-                     central_crop=True,
+                     central_crop=False,
                      use_grayscale=False):
     """Prepare one image for evaluation.
 

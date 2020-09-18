@@ -55,6 +55,8 @@ python export_cls_model_inference_graph.py \
   --trained_checkpoint_prefix=data/work_dirs/flowers-models/inception_v3/model.ckpt-1000 \
   --output_directory=data/work_dirs/flowers-models/inception_v3/export
 
+
+
 python export_cls_model_inference_graph.py \
   --alsologtostderr \
   --dataset_name  dog-vs-cat \
