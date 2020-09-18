@@ -23,6 +23,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 
+import os
 #import tensorflow.compat.v1 as tf
 import tf_slim as slim
 
@@ -38,7 +39,10 @@ from datasets import dataset_factory
 from deployment import model_deploy
 from nets import nets_factory
 from preprocessing import preprocessing_factory
+from slim_exporter import export_inference_graph
 
+
+LABELS_FILENAME = '%s_labels.txt'
 tf.app.flags.DEFINE_string(
     'master', '', 'The address of the TensorFlow master to use.')
 
@@ -259,6 +263,17 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_boolean(
     'ignore_missing_vars', False,
     'When restoring a checkpoint would ignore missing variables.')
+
+#####################
+# Export model Flags #
+#####################
+tf.flags.DEFINE_string('input_type', 'image_tensor', 'Type of input node. Can '
+                    "be one of ['image_tensor', 'encoded_image_string_tensor'"
+                    ", 'tf_example']")
+tf.flags.DEFINE_string('trained_checkpoint_prefix', None,
+                    'Path to trained checkpoint, typically of the form '
+                    'path/to/model.ckpt')
+tf.flags.DEFINE_string('output_directory', None, 'Path to write outputs')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -645,6 +660,66 @@ def main(_):
         save_summaries_secs=FLAGS.save_summaries_secs,
         save_interval_secs=FLAGS.save_interval_secs,
         sync_optimizer=optimizer if FLAGS.sync_replicas else None)
+
+  ###########################
+  # Kicks off the training. #
+  ###########################
+  FLAGS.trained_checkpoint_prefix = os.path.join(FLAGS.train_dir, 'model.ckpt-' + str(FLAGS.max_number_of_steps))
+  FLAGS.output_directory = os.path.join(FLAGS.train_dir, 'export')
+
+  dataset = dataset_factory.get_dataset(FLAGS.dataset_name, 'train',
+                                      FLAGS.dataset_dir)
+  network_fn = nets_factory.get_network_fn(
+          FLAGS.model_name,
+          num_classes=(dataset.num_classes - FLAGS.labels_offset),
+          is_training=False)
+  
+  image_size = network_fn.default_image_size
+  input_shape = [None, image_size, image_size, 3]
+
+  export_inference_graph(FLAGS.input_type,
+                          image_size,
+                          network_fn,
+                          FLAGS.trained_checkpoint_prefix,
+                          FLAGS.output_directory,
+                          input_shape)
+  
+  def writeLabels():
+    import json
+    labels_to_class_names = read_label_file(FLAGS.dataset_dir, FLAGS.dataset_name)
+    data = []
+    with open(os.path.join(FLAGS.output_directory,'class_names.json'),'w') as jsonfile:
+      for key,value in labels_to_class_names.items():
+          data.append({"id":int(key),"display_name":value})
+      json.dump(data,jsonfile)
+
+
+  def read_label_file(dataset_dir, dataset_name, filename=LABELS_FILENAME):
+    """Reads the labels file and returns a mapping from ID to class name.
+
+    Args:
+      dataset_dir: The directory in which the labels file is found.
+      filename: The filename where the class names are written.
+
+    Returns:
+      A map from a label (integer) to class name.
+    """
+    labels_filename = os.path.join(dataset_dir, filename%(dataset_name))
+    with tf.gfile.Open(labels_filename, 'rb') as f:
+      lines = f.read().decode()
+    lines = lines.split('\n')
+    lines = filter(None, lines)
+
+    labels_to_class_names = {}
+    for line in lines:
+      index = line.index(':')
+      labels_to_class_names[int(line[:index])] = line[index+1:]
+    return labels_to_class_names
+
+  ###########################
+  # Write Label. #
+  ###########################
+  writeLabels()
 
 
 if __name__ == '__main__':

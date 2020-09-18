@@ -52,7 +52,7 @@ python export_cls_model_inference_graph.py \
   --dataset_dir=data/flowers \
   --input_type=image_tensor \
   --model_name=inception_v3 \
-  --trained_checkpoint_prefix=data/work_dirs/flowers-models/inception_v3/model.ckpt-1000 \
+  --trained_checkpoint_prefix=data/work_dirs/flowers-models/inception_v3/model.ckpt-500 \
   --output_directory=data/work_dirs/flowers-models/inception_v3/export
 
 
