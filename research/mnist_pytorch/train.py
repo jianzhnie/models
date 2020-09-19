@@ -92,6 +92,8 @@ def main():
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     parser.add_argument('--output_path', default='./data', help='the dir to save model')
+    parser.add_argument('--visualPath', default='', help='visual tensorboard path')
+
     args = parser.parse_args()
 
     use_cuda = not args.no_cuda and torch.cuda.is_available()

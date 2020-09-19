@@ -31,6 +31,7 @@ from mxnet.gluon import nn
 
 parser = argparse.ArgumentParser(description='MXNet Gluon MNIST Example')
 parser.add_argument('--data_path', default='./data', help='the dir to download datasets')
+parser.add_argument('--visualPath', default='', help='visual tensorboard path')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='batch size for training and testing (default: 100)')
 parser.add_argument('--epochs', type=int, default=1,

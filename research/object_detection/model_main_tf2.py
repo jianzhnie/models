@@ -51,6 +51,8 @@ os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 #######################
 # DATASETS DEFINE #
 #######################
+flags.DEFINE_string('visualPath', '',
+                    'visual tensorflow path')
 flags.DEFINE_boolean(
     'include_masks', False, 'Whether to include instance segmentations masks '
                             '(PNG encoded) in the result. default: False.')

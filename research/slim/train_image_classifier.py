@@ -52,7 +52,8 @@ tf.app.flags.DEFINE_string(
 
 tf.app.flags.DEFINE_string(
     'output_path', None, 'Directory where checkpoints and event logs are written to.')
-
+tf.app.flags.DEFINE_string(
+    'visualPath', None, 'visual tensorflow path')
 tf.app.flags.DEFINE_float(
     'warmup_epochs', 0,
     'Linearly warmup learning rate from 0 to learning_rate over this '

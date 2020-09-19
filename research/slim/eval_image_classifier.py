@@ -41,7 +41,8 @@ from metrics import streaming_true_positives, streaming_true_negatives, streamin
 
 tf.app.flags.DEFINE_integer(
     'batch_size', 100, 'The number of samples in each batch.')
-
+tf.app.flags.DEFINE_string(
+    'visualPath', None, 'visual tensorboard path')
 tf.app.flags.DEFINE_integer(
     'max_num_batches', None,
     'Max number of batches to evaluate by default use all.')
