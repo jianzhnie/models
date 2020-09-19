@@ -41,8 +41,7 @@ from metrics import streaming_true_positives, streaming_true_negatives, streamin
 
 tf.app.flags.DEFINE_integer(
     'batch_size', 100, 'The number of samples in each batch.')
-tf.app.flags.DEFINE_string(
-    'visualPath', None, 'visual tensorboard path')
+
 tf.app.flags.DEFINE_integer(
     'max_num_batches', None,
     'Max number of batches to evaluate by default use all.')
@@ -103,6 +102,22 @@ tf.app.flags.DEFINE_bool(
 
 tf.app.flags.DEFINE_bool('use_grayscale', False,
                          'Whether to convert input images to grayscale.')
+tf.app.flags.DEFINE_string(
+    'checkpoint_exclude_scopes', None,
+    'Comma-separated list of scopes of variables to exclude when restoring '
+    'from a checkpoint.')
+
+tf.app.flags.DEFINE_string(
+    'trainable_scopes', None,
+    'Comma-separated list of scopes to filter the set of variables to train.'
+    'By default, None would train all the variables.')
+
+tf.app.flags.DEFINE_boolean(
+    'ignore_missing_vars', False,
+    'When restoring a checkpoint would ignore missing variables.')
+tf.app.flags.DEFINE_string(
+    'visualPath', '',
+    'visual tensorboard path.')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -264,7 +279,7 @@ if __name__ == '__main__':
         FLAGS.eval_dir = FLAGS.output_path
     # 适配dog-cat
     if 'dog' in FLAGS.data_path:
-        FLAGS.dataset_name="dog-vs-cat"
-        FLAGS.dataset_split_name="validation"
-        FLAGS.model_name="inception_v3"
+        FLAGS.dataset_name = "dog-vs-cat"
+        FLAGS.dataset_split_name = "validation"
+        FLAGS.model_name = "inception_v3"
     tf.app.run()
