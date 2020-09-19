@@ -118,6 +118,27 @@ tf.app.flags.DEFINE_boolean(
 tf.app.flags.DEFINE_string(
     'visualPath', '',
     'visual tensorboard path.')
+tf.app.flags.DEFINE_string(
+    'learning_rate', '',
+    'learning_rate.')
+tf.app.flags.DEFINE_string(
+    'log_every_n_steps', '',
+    'log_every_n_steps.')
+tf.app.flags.DEFINE_string(
+    'max_number_of_steps', '',
+    'max_number_of_steps.')
+tf.app.flags.DEFINE_string(
+    'optimizer', '',
+    'optimizer.')
+tf.app.flags.DEFINE_string(
+    'save_interval_secs', '',
+    'save_interval_secs.')
+tf.app.flags.DEFINE_string(
+    'save_summaries_secs', '',
+    'save_summaries_secs.')
+tf.app.flags.DEFINE_string(
+    'weight_decay', '',
+    'weight_decay.')
 
 FLAGS = tf.app.flags.FLAGS
 
