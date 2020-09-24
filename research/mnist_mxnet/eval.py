@@ -45,6 +45,8 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--checkpoint_path', default='./data', help='the dir to save model')
 parser.add_argument('--output_path', default='./data', help='the dir to save model')
+parser.add_argument('--visualPath', default='', help='visual tensorboard path')
+
 opt = parser.parse_args()
 
 

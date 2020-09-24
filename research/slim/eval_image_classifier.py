@@ -102,6 +102,43 @@ tf.app.flags.DEFINE_bool(
 
 tf.app.flags.DEFINE_bool('use_grayscale', False,
                          'Whether to convert input images to grayscale.')
+tf.app.flags.DEFINE_string(
+    'checkpoint_exclude_scopes', None,
+    'Comma-separated list of scopes of variables to exclude when restoring '
+    'from a checkpoint.')
+
+tf.app.flags.DEFINE_string(
+    'trainable_scopes', None,
+    'Comma-separated list of scopes to filter the set of variables to train.'
+    'By default, None would train all the variables.')
+
+tf.app.flags.DEFINE_boolean(
+    'ignore_missing_vars', False,
+    'When restoring a checkpoint would ignore missing variables.')
+tf.app.flags.DEFINE_string(
+    'visualPath', '',
+    'visual tensorboard path.')
+tf.app.flags.DEFINE_string(
+    'learning_rate', '',
+    'learning_rate.')
+tf.app.flags.DEFINE_string(
+    'log_every_n_steps', '',
+    'log_every_n_steps.')
+tf.app.flags.DEFINE_string(
+    'max_number_of_steps', '',
+    'max_number_of_steps.')
+tf.app.flags.DEFINE_string(
+    'optimizer', '',
+    'optimizer.')
+tf.app.flags.DEFINE_string(
+    'save_interval_secs', '',
+    'save_interval_secs.')
+tf.app.flags.DEFINE_string(
+    'save_summaries_secs', '',
+    'save_summaries_secs.')
+tf.app.flags.DEFINE_string(
+    'weight_decay', '',
+    'weight_decay.')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -263,7 +300,7 @@ if __name__ == '__main__':
         FLAGS.eval_dir = FLAGS.output_path
     # 适配dog-cat
     if 'dog' in FLAGS.data_path:
-        FLAGS.dataset_name="dog-vs-cat"
-        FLAGS.dataset_split_name="validation"
-        FLAGS.model_name="inception_v3"
+        FLAGS.dataset_name = "dog-vs-cat"
+        FLAGS.dataset_split_name = "validation"
+        FLAGS.model_name = "inception_v3"
     tf.app.run()
