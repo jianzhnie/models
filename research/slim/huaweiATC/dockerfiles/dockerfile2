@@ -36,8 +36,8 @@ RUN pip3.7.5 install psutil
 
 
 ## Ascend-Toolkit
-COPY /home/robin/software/Ascend-Toolkit-20.0.RC1-x86_64-linux_gcc7.3.0.run .
-RUN ./Ascend-Toolkit-20.0.RC1-x86_64-linux_gcc7.3.0.run
+# COPY /home/robin/software/Ascend-Toolkit-20.0.RC1-x86_64-linux_gcc7.3.0.run .
+# RUN ./Ascend-Toolkit-20.0.RC1-x86_64-linux_gcc7.3.0.run
 
 # # # control log level. 0-DEBUG, 1-INFO, 2-WARNING, 3-ERROR, default level is WARNING.
 # export PATH=/usr/local/python3.7.5/bin:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/ccec_compiler/bin:/usr/local/Ascend/ascend-toolkit/20.0.RC1/atc/bin:$PATH
