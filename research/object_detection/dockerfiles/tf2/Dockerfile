@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
     python3-lxml \
     python3-tk \
     wget \
-    vim
+    vim \
+    sudo \
 
 
 # Install gcloud and gsutil commands
