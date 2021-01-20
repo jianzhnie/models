@@ -14,10 +14,6 @@
 # ==============================================================================
 """A light weight utilities to train NLP models."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import json
 import os
 import tempfile
@@ -65,8 +61,7 @@ def _get_input_iterator(input_fn, strategy):
   # pass callable that returns a dataset.
   if not callable(input_fn):
     raise ValueError('`input_fn` should be a closure that returns a dataset.')
-  iterator = iter(
-      strategy.experimental_distribute_datasets_from_function(input_fn))
+  iterator = iter(strategy.distribute_datasets_from_function(input_fn))
   return iterator
 
 
@@ -137,7 +132,7 @@ def run_customized_training_loop(
     allreduce_bytes_per_pack=0):
   """Run BERT pretrain model training using low-level API.
 
-  Arguments:
+  Args:
       _sentinel: Used to prevent positional parameters. Internal, do not use.
       strategy: Distribution strategy on which to run low level training loop.
       model_fn: Function that returns a tuple (model, sub_model). Caller of this
@@ -250,7 +245,9 @@ def run_customized_training_loop(
   assert tf.executing_eagerly()
 
   if run_eagerly:
-    if isinstance(strategy, tf.distribute.experimental.TPUStrategy):
+    if isinstance(
+        strategy,
+        (tf.distribute.TPUStrategy, tf.distribute.experimental.TPUStrategy)):
       raise ValueError(
           'TPUStrategy should not run eagerly as it heavily relies on graph'
           ' optimization for the distributed system.')
@@ -286,8 +283,8 @@ def run_customized_training_loop(
       logging.info(
           'Checkpoint file %s found and restoring from '
           'initial checkpoint for core model.', init_checkpoint)
-      checkpoint = tf.train.Checkpoint(model=sub_model)
-      checkpoint.restore(init_checkpoint).assert_existing_objects_matched()
+      checkpoint = tf.train.Checkpoint(model=sub_model, encoder=sub_model)
+      checkpoint.read(init_checkpoint).assert_existing_objects_matched()
       logging.info('Loading from checkpoint file completed')
 
     train_loss_metric = tf.keras.metrics.Mean('training_loss', dtype=tf.float32)
@@ -343,8 +340,7 @@ def run_customized_training_loop(
                                                      post_allreduce_callbacks,
                                                      allreduce_bytes_per_pack)
       else:
-        if isinstance(optimizer,
-                      tf.keras.mixed_precision.experimental.LossScaleOptimizer):
+        if isinstance(optimizer, tf.keras.mixed_precision.LossScaleOptimizer):
           with tape:
             scaled_loss = optimizer.get_scaled_loss(loss)
           scaled_grads = tape.gradient(scaled_loss, training_vars)

@@ -1,4 +1,4 @@
-# Copyright 2018 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2021 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
+
 """Helper functions for running models in a distributed setting."""
 
 import json
 import os
-import random
-import string
-
-from absl import logging
 import tensorflow as tf
 
 
@@ -141,7 +137,7 @@ def get_distribution_strategy(distribution_strategy="mirrored",
   if distribution_strategy == "tpu":
     # When tpu_address is an empty string, we communicate with local TPUs.
     cluster_resolver = tpu_initialize(tpu_address)
-    return tf.distribute.experimental.TPUStrategy(cluster_resolver)
+    return tf.distribute.TPUStrategy(cluster_resolver)
 
   if distribution_strategy == "multi_worker_mirrored":
     return tf.distribute.experimental.MultiWorkerMirroredStrategy(
@@ -165,7 +161,7 @@ def get_distribution_strategy(distribution_strategy="mirrored",
         cross_device_ops=_mirrored_cross_device_ops(all_reduce_alg, num_packs))
 
   if distribution_strategy == "parameter_server":
-    return tf.distribute.experimental.ParameterServerStrategy()
+    return tf.compat.v1.distribute.experimental.ParameterServerStrategy()
 
   raise ValueError("Unrecognized Distribution Strategy: %r" %
                    distribution_strategy)

@@ -31,7 +31,7 @@ class MaskedLM(tf.keras.layers.Layer):
   lm_layer=MaskedLM(embedding_table=encoder.get_embedding_table())
   ```
 
-  Arguments:
+  Args:
     embedding_table: The embedding table from encoder network.
     activation: The activation, if any, for the dense layer.
     initializer: The initializer for the dense layer. Defaults to a Glorot
@@ -81,8 +81,7 @@ class MaskedLM(tf.keras.layers.Layer):
     lm_data = self.layer_norm(lm_data)
     lm_data = tf.matmul(lm_data, self.embedding_table, transpose_b=True)
     logits = tf.nn.bias_add(lm_data, self.bias)
-
-    masked_positions_length = masked_positions.shape[1] or tf.shape(
+    masked_positions_length = masked_positions.shape.as_list()[1] or tf.shape(
         masked_positions)[1]
     logits = tf.reshape(logits,
                         [-1, masked_positions_length, self._vocab_size])

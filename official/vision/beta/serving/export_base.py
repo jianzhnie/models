@@ -62,7 +62,7 @@ class ExportModule(tf.Module, metaclass=abc.ABCMeta):
 
   @tf.function
   def inference_from_image_tensors(self, input_tensor):
-    return dict(outputs=self._run_inference_on_image_tensors(input_tensor))
+    return self._run_inference_on_image_tensors(input_tensor)
 
   @tf.function
   def inference_from_image_bytes(self, input_tensor):
@@ -76,7 +76,7 @@ class ExportModule(tf.Module, metaclass=abc.ABCMeta):
                   shape=self._input_image_size + [3], dtype=tf.uint8),
               parallel_iterations=32))
       images = tf.stack(images)
-    return dict(outputs=self._run_inference_on_image_tensors(images))
+    return self._run_inference_on_image_tensors(images)
 
   @tf.function
   def inference_from_tf_example(self, input_tensor):
@@ -86,9 +86,13 @@ class ExportModule(tf.Module, metaclass=abc.ABCMeta):
           tf.map_fn(
               _decode_tf_example,
               elems=input_tensor,
+              # Height/width of the shape of input images is unspecified (None)
+              # at the time of decoding the example, but the shape will
+              # be adjusted to conform to the input layer of the model,
+              # by _run_inference_on_image_tensors() below.
               fn_output_signature=tf.TensorSpec(
-                  shape=self._input_image_size + [3], dtype=tf.uint8),
+                  shape=[None, None, 3], dtype=tf.uint8),
               dtype=tf.uint8,
               parallel_iterations=32))
       images = tf.stack(images)
-    return dict(outputs=self._run_inference_on_image_tensors(images))
+    return self._run_inference_on_image_tensors(images)

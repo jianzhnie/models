@@ -159,6 +159,9 @@ if tf_version.is_tf2():
           center_net_mobilenet_v2_feature_extractor.mobilenet_v2,
       'mobilenet_v2_fpn':
           center_net_mobilenet_v2_fpn_feature_extractor.mobilenet_v2_fpn,
+      'mobilenet_v2_fpn_sep_conv':
+          center_net_mobilenet_v2_fpn_feature_extractor
+          .mobilenet_v2_fpn_sep_conv,
   }
 
   FEATURE_EXTRACTOR_MAPS = [
@@ -756,7 +759,9 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
       'return_raw_detections_during_predict':
           frcnn_config.return_raw_detections_during_predict,
       'output_final_box_features':
-          frcnn_config.output_final_box_features
+          frcnn_config.output_final_box_features,
+      'output_final_box_rpn_features':
+          frcnn_config.output_final_box_rpn_features,
   }
 
   if ((not is_keras and isinstance(second_stage_box_predictor,
@@ -773,7 +778,19 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
         'attention_bottleneck_dimension':
             context_config.attention_bottleneck_dimension,
         'attention_temperature':
-            context_config.attention_temperature
+            context_config.attention_temperature,
+        'use_self_attention':
+            context_config.use_self_attention,
+        'use_long_term_attention':
+            context_config.use_long_term_attention,
+        'self_attention_in_sequence':
+            context_config.self_attention_in_sequence,
+        'num_attention_heads':
+            context_config.num_attention_heads,
+        'num_attention_layers':
+            context_config.num_attention_layers,
+        'attention_position':
+            context_config.attention_position
     })
     return context_rcnn_meta_arch.ContextRCNNMetaArch(
         initial_crop_size=initial_crop_size,
@@ -1035,7 +1052,9 @@ def _build_center_net_model(center_net_config, is_training, add_summaries):
       mask_params=mask_params,
       densepose_params=densepose_params,
       track_params=track_params,
-      temporal_offset_params=temporal_offset_params)
+      temporal_offset_params=temporal_offset_params,
+      use_depthwise=center_net_config.use_depthwise,
+      compute_heatmap_sparse=center_net_config.compute_heatmap_sparse)
 
 
 def _build_center_net_feature_extractor(
